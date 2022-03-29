@@ -1,6 +1,5 @@
 ﻿using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
-using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -12,7 +11,6 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle falsePanelRect = Rectangle.Empty;
         private Rectangle truePanelRect = Rectangle.Empty;
 
-        public override event EventHandler? ValueChanged;
 
         private bool? RawValue
         {
@@ -25,7 +23,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 _value = value;
                 Invalidate();
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
 
@@ -76,6 +74,5 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
         protected override void CreateValue() => Value = Type.Default;
-        protected override void ChangeValue() => ValueChanged?.Invoke(this, EventArgs.Empty);
     }
 }

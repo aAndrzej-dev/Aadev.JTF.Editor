@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	<TargetFramework>net5.0-windows</TargetFramework>
-	<UseWindowsForms>true</UseWindowsForms>
+	 <TargetFramework>net5.0-windows</TargetFramework>
+	 <UseWindowsForms>true</UseWindowsForms>
 	<RootNamespace>Aadev.JTF.Editor</RootNamespace>
 	<AssemblyName>Aadev.JTF.Editor</AssemblyName>
 	<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -14,12 +14,14 @@
 	<AssemblyVersion>1.0.0.0</AssemblyVersion>
     <PackageReleaseNotes>Initial release</PackageReleaseNotes>
 	<FileVersion>1.0.0.0</FileVersion>
-	<Version>1.0.0-alpha1</Version>
+	<Version>1.0.0-alpha2</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
+    <PackageReleaseNotes>Fixed bug when adding new item to array</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
+	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
 	
 		
   </PropertyGroup>

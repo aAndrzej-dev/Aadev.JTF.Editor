@@ -12,7 +12,6 @@ namespace Aadev.JTF.Editor.EditorItems
         private JToken _value = JValue.CreateNull();
         private Rectangle textboxBounds = Rectangle.Empty;
 
-        public override event EventHandler? ValueChanged;
 
         private new JtString Type => (JtString)base.Type;
 
@@ -28,7 +27,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 _value = value;
                 Invalidate();
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
 
@@ -37,7 +36,6 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             SetStyle(ControlStyles.Selectable, true);
         }
-
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -86,7 +84,6 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
         protected override void CreateValue() => Value = Type.Default;
-        protected override void ChangeValue() => ValueChanged?.Invoke(this, EventArgs.Empty);
         private void CreateTextBox()
         {
             if (InvalidValueType)

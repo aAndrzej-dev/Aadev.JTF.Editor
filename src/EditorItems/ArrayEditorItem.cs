@@ -1,6 +1,5 @@
 ﻿using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -15,7 +14,6 @@ namespace Aadev.JTF.Editor.EditorItems
         private int y;
         private readonly Dictionary<string, EditorItem> objectsArray = new();
 
-        public override event EventHandler? ValueChanged;
 
         public new JtArray Type => (JtArray)base.Type;
         public override JToken Value
@@ -25,7 +23,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 _value = value;
                 Invalidate();
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
 
@@ -96,17 +94,25 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseClick(e);
             if (addNewButtonBounds.Contains(e.Location))
             {
+                EnsureValue();
                 if (Type.MakeAsObject)
                     CreateObjectItem();
                 else
                     CreateArrayItem(((JArray)Value).Count);
 
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
         protected override void OnMouseMove(MouseEventArgs e) => Cursor = addNewButtonBounds.Contains(e.Location) ? Cursors.Hand : Cursors.Default;
         protected override void CreateValue() => Value = Type.MakeAsObject ? new JObject() : new JArray();
-        protected override void ChangeValue() => ValueChanged?.Invoke(this, EventArgs.Empty);
+
+        private void EnsureValue()
+        {
+            if ((Type.MakeAsObject && Value is not JObject) || (!Type.MakeAsObject && Value is not JArray))
+                CreateValue();
+
+        }
+
 
         private int BeiResize(Control bei)
         {
@@ -137,10 +143,9 @@ namespace Aadev.JTF.Editor.EditorItems
             if (InvalidValueType)
                 return;
             Value ??= new JArray();
-            JArray? value = Value as JArray;
 
-            if (value is null)
-                return;
+            if (Value is not JArray value)
+                value = new JArray();
 
             int index = 0;
             foreach (JToken item in value)
@@ -164,7 +169,6 @@ namespace Aadev.JTF.Editor.EditorItems
             if (InvalidValueType)
                 return;
             EditorItem? bei = Create(Type.Prefabs[0], itemValue);
-
             if (bei is null) return;
 
             JArray value = (JArray)Value;
@@ -215,7 +219,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     array![index] = bei.Value;
                 }
 
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
 
 
             };
@@ -232,7 +236,7 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             if (InvalidValueType)
                 return;
-            EditorItem? bei = Create(Type.Prefabs[0], null);
+            EditorItem? bei = Create(Type.Prefabs[0], null); 
 
             if (bei is null)
             {
@@ -302,12 +306,12 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
                 obj[bei.DynamicName!] = bei.Value;
 
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
 
 
 
             };
-            bei.DynamicNameChanged += (s, ev) => ValueChanged?.Invoke(this, EventArgs.Empty);
+            bei.DynamicNameChanged += (s, ev) => OnValueChanged();
             if (item is null)
                 bei.DynamicName = newDynamicName;
             objectsArray.Add(bei.DynamicName!, bei);

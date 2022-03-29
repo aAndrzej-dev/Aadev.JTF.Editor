@@ -1,6 +1,5 @@
 ﻿using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
@@ -10,7 +9,6 @@ namespace Aadev.JTF.Editor.EditorItems
     internal sealed class BlockEditorItem : EditorItem
     {
         private int y;
-        public override event EventHandler? ValueChanged;
         private JToken _value = JValue.CreateNull();
 
         private new JtBlock Type => (JtBlock)base.Type;
@@ -28,13 +26,11 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 _value = value;
                 Invalidate();
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
 
         internal BlockEditorItem(JtToken type, JToken? token) : base(type, token) { }
-
-        protected override void ChangeValue() => ValueChanged?.Invoke(this, EventArgs.Empty);
 
         protected override void OnExpandChanged()
         {
@@ -56,10 +52,10 @@ namespace Aadev.JTF.Editor.EditorItems
             foreach (JtToken item in Type.Children)
             {
 
+                JtToken[]? twinFamily = item.GetTwinFamily();
 
 
-
-                if (item.GetTwinFamily().Length > 1)
+                if (twinFamily.Length > 1)
                 {
 
 
@@ -68,7 +64,7 @@ namespace Aadev.JTF.Editor.EditorItems
                         continue;
                     }
 
-                    IEnumerable<JtToken>? t = item.GetTwinFamily().Where(x => x.JsonType == RawValue?[item.Name!]?.Type);
+                    IEnumerable<JtToken>? t = twinFamily.Where(x => x.JsonType == RawValue?[item.Name!]?.Type);
 
                     if (t is null || t?.Count() == 0)
                     {
@@ -83,7 +79,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-
+    
 
 
                 }
@@ -171,7 +167,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 }
 
-                ValueChanged?.Invoke(sender, e);
+                OnValueChanged();
             };
 
             bei.TwinTypeChanged += (sender, e) =>

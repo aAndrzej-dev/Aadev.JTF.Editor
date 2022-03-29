@@ -11,7 +11,6 @@ namespace Aadev.JTF.Editor.EditorItems
         private TextBox? textBox;
         private JToken _value = JValue.CreateNull();
 
-        public override event EventHandler? ValueChanged;
 
 
         private int? RawValue
@@ -26,7 +25,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 _value = value;
                 Invalidate();
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
 
@@ -72,7 +71,6 @@ namespace Aadev.JTF.Editor.EditorItems
             else if (Type.Type == JtTokenType.Double)
                 Value = ((JtFloat)Type).Default;
         }
-        protected override void ChangeValue() => ValueChanged?.Invoke(this, EventArgs.Empty);
 
         public void CreateNumeric()
         {
@@ -134,7 +132,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 textBox = null;
             };
 
-
+          
         }
     }
 }

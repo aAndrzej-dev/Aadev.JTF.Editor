@@ -11,7 +11,6 @@ namespace Aadev.JTF.Editor.EditorItems
         private JToken _value = JValue.CreateNull();
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
         private ComboBox? comboBox;
-        public override event EventHandler? ValueChanged;
 
         private new JtEnum Type => (JtEnum)base.Type;
 
@@ -26,7 +25,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 _value = value;
                 Invalidate();
-                ValueChanged?.Invoke(this, EventArgs.Empty);
+                OnValueChanged();
             }
         }
 
@@ -35,7 +34,6 @@ namespace Aadev.JTF.Editor.EditorItems
         internal EnumEditorItem(JtToken type, JToken? token) : base(type, token)
         {
         }
-
 
 
 
@@ -169,6 +167,5 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseClick(e);
         }
         protected override void CreateValue() => Value = Type.Default;
-        protected override void ChangeValue() => ValueChanged?.Invoke(this, EventArgs.Empty);
     }
 }

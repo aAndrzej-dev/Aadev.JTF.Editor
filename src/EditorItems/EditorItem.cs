@@ -7,9 +7,7 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal abstract partial class EditorItem : UserControl, IHaveEventManager
     {
-
-
-        protected virtual bool InvalidValueType => Value is not null && Value.Type is not JTokenType.Null && (Value.Type != Type.JsonType);
+        protected bool InvalidValueType => Value is not null && Value.Type is not JTokenType.Null && (Value.Type != Type.JsonType);
 
         private EventManager? eventManager;
         private readonly JtToken[] twinsFamily;
@@ -26,7 +24,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected Rectangle discardInvalidTypeButtonBounds = Rectangle.Empty;
         protected Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
 
-        public abstract event EventHandler? ValueChanged;
+        public event EventHandler? ValueChanged;
         public event EventHandler? DynamicNameChanged;
         public event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
         public event EventHandler? HeightChanged;
@@ -45,9 +43,10 @@ namespace Aadev.JTF.Editor.EditorItems
         protected bool Expanded { get => expanded; set { expanded = value; OnExpandChanged(); } }
 
         protected abstract void CreateValue();
-        protected abstract void ChangeValue();
-
-
+        protected void OnValueChanged()
+        {
+            ValueChanged?.Invoke(this, EventArgs.Empty);
+        }
         protected virtual void OnExpandChanged() => Invalidate();
 
         protected EditorItem(JtToken type, JToken? token)
@@ -86,11 +85,6 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnParentChanged(e);
 
-            if (string.IsNullOrWhiteSpace(Type.Id))
-            {
-                return;
-            }
-
             EventManager?.RegistryEvent(Type.Id, Value);
 
             ValueChanged += (s, ev) => EventManager?.GetEvent(Type.Id)?.Invoke(Value);
@@ -126,10 +120,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 }
             }
-
-
-
-
 
             if ((Type.Type == JtTokenType.Array || Type.Type == JtTokenType.Block) && !InvalidValueType)
             {
@@ -198,7 +188,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
                     e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), xOffset, 1, size, 30);
                     dynamicNameTextboxBounds = new Rectangle(xOffset, 0, size, 32);
-                    xOffset += size;
                     if (tbDynamicName is null)
                     {
 
@@ -206,6 +195,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
                         e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
                     }
+                    xOffset += size;
                 }
 
 
@@ -271,11 +261,8 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
-
             if (expandButtonBounds.Contains(e.Location))
             {
-
-
                 Expanded = !Expanded;
                 return;
             }
@@ -348,7 +335,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 AutoSize = false,
 
 
-                Text = DynamicName,
+                Text = DynamicName
 
             };
             tbDynamicName.Width = Width - xOffset - 20 - xRightOffset;
@@ -364,7 +351,7 @@ namespace Aadev.JTF.Editor.EditorItems
             tbDynamicName.LostFocus += (sender, eventArgs) =>
             {
                 DynamicName = tbDynamicName.Text;
-                ChangeValue();
+                OnValueChanged();
                 Controls.Remove(tbDynamicName);
                 tbDynamicName = null;
             };
