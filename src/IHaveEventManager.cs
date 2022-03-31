@@ -2,6 +2,6 @@
 {
     internal interface IHaveEventManager
     {
-        EventManager? EventManager { get; }
+        EventManager EventManager { get; }
     }
 }

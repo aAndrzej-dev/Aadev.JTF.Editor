@@ -42,7 +42,7 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnPaint(e);
 
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
 
             if (InvalidValue)
@@ -93,7 +93,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private void CreateComboBox()
         {
-            if (InvalidValueType || InvalidValue)
+            if (IsInvalidValueType || InvalidValue)
                 return;
             if (comboBox != null)
             {

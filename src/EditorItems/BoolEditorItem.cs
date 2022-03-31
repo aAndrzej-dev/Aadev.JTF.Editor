@@ -14,7 +14,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private bool? RawValue
         {
-            get => _value?.Type == Type.JsonType ? ((bool?)_value ?? Type.Default) : (_value?.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
+            get => _value.Type == Type.JsonType ? ((bool?)_value ?? Type.Default) : (_value.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
         }
         public override JToken Value
         {
@@ -34,18 +34,20 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
             int width = Width - xOffset - xRightOffset;
+            int halfWidth = (int)(width * 0.5f);
+
 
             Graphics g = e.Graphics;
 
-            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? BackColor : Color.Red), xOffset, 1, width / 2, Height - 2);
-            falsePanelRect = new Rectangle(xOffset, 1, width / 2, Height - 2);
+            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? BackColor : Color.Red), xOffset, 1, halfWidth, Height - 2);
+            falsePanelRect = new Rectangle(xOffset, 1, halfWidth, Height - 2);
 
 
-            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? Color.Green : BackColor), xOffset + width / 2, 1, width / 2, Height - 2);
-            truePanelRect = new Rectangle(xOffset + width / 2, 1, width / 2, Height - 2);
+            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? Color.Green : BackColor), xOffset + halfWidth, 1, halfWidth, Height - 2);
+            truePanelRect = new Rectangle(xOffset + halfWidth, 1, halfWidth, Height - 2);
 
             SizeF falseLabelSize = g.MeasureString("False", Font);
 
@@ -53,13 +55,14 @@ namespace Aadev.JTF.Editor.EditorItems
 
             SizeF trueLabelSize = g.MeasureString("True", Font);
 
-            g.DrawString("True", Font, new SolidBrush(RawValue ?? Type.Default ? Color.White : ForeColor), new PointF(xOffset + width / 2 + width / 4 - trueLabelSize.Width / 2, Height / 2 - trueLabelSize.Height / 2));
+            g.DrawString("True", Font, new SolidBrush(RawValue ?? Type.Default ? Color.White : ForeColor), new PointF(xOffset + halfWidth + width / 4 - trueLabelSize.Width / 2, Height / 2 - trueLabelSize.Height / 2));
 
         }
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
-            if (InvalidValueType)
+
+            if (IsInvalidValueType)
             {
                 return;
             }
@@ -67,10 +70,12 @@ namespace Aadev.JTF.Editor.EditorItems
             if (falsePanelRect.Contains(e.Location))
             {
                 Value = false;
+                return;
             }
-            else if (truePanelRect.Contains(e.Location))
+            if (truePanelRect.Contains(e.Location))
             {
                 Value = true;
+                return;
             }
         }
         protected override void CreateValue() => Value = Type.Default;

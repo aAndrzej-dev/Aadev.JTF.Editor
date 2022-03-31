@@ -14,7 +14,7 @@ namespace Aadev.JTF.Editor
         private int y;
         private JObject? Root;
         private string? filename;
-        private EventManager? eventManager;
+        private EventManager eventManager;
 
 
         public event EventHandler? ValueChanged;
@@ -24,10 +24,11 @@ namespace Aadev.JTF.Editor
         public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
         public string? Filename { get => filename; set { filename = value; OnTemplateChanged(); } }
 
-        EventManager? IHaveEventManager.EventManager => eventManager;
+        EventManager IHaveEventManager.EventManager => eventManager;
 
         public JsonJtfEditor()
         {
+            eventManager = new EventManager();
             InitializeComponent();
         }
 
@@ -35,7 +36,7 @@ namespace Aadev.JTF.Editor
 
         private void OnTemplateChanged()
         {
-            if (Template is null || string.IsNullOrEmpty(Filename))
+            if (template is null || string.IsNullOrEmpty(Filename))
             {
                 return;
             }
@@ -54,7 +55,7 @@ namespace Aadev.JTF.Editor
 
             List<string> Twins = new();
 
-            foreach (JtToken item in template!.Children)
+            foreach (JtToken item in template.Children)
             {
 
 
@@ -65,7 +66,7 @@ namespace Aadev.JTF.Editor
                         continue;
                     }
 
-                    if (Root[item.Name!] != null && Root[item.Name!]!.Type != item.JsonType)
+                    if (Root[item.Name!] is not null && Root[item.Name!]!.Type != item.JsonType)
                     {
                         continue;
                     }
@@ -106,7 +107,7 @@ namespace Aadev.JTF.Editor
 
         private int CreateBei(JtToken type, int y, bool resizeOnCreate = false)
         {
-            EditorItem? bei;
+            EditorItem bei;
             if (resizeOnCreate)
             {
                 Root![type.Name!] = null;
@@ -117,10 +118,6 @@ namespace Aadev.JTF.Editor
                 bei = EditorItem.Create(type, Root![type.Name!]);
             }
 
-            if (bei == null)
-            {
-                return y;
-            }
 
             bei.Location = new System.Drawing.Point(10, y);
             bei.Width = Width - 20;
@@ -140,7 +137,7 @@ namespace Aadev.JTF.Editor
             {
 
 
-                if (bei.Value?.Type is JTokenType.Null || bei.Value is null)
+                if (bei.Value.Type is JTokenType.Null)
                 {
 
                     Root?.Remove(bei.Type.Name!);
@@ -149,7 +146,6 @@ namespace Aadev.JTF.Editor
                 else
                 {
                     Root![bei.Type.Name!] = bei.Value;
-
                 }
 
                 ValueChanged?.Invoke(sender, e);
@@ -157,12 +153,9 @@ namespace Aadev.JTF.Editor
 
             bei.TwinTypeChanged += (sender, e) =>
             {
-
                 Controls.Remove(bei);
 
                 CreateBei(e.NewTwinType!, bei.Top, true);
-
-
             };
             if (bei.Height != 0)
             {
@@ -171,10 +164,5 @@ namespace Aadev.JTF.Editor
 
             return y;
         }
-
-
-
-
-
     }
 }

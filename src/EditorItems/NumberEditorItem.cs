@@ -35,7 +35,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            if (InvalidValueType)
+            if (IsInvalidValueType)
             {
                 return;
             }
@@ -74,7 +74,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         public void CreateNumeric()
         {
-            if (InvalidValueType)
+            if (IsInvalidValueType)
             {
                 return;
             }
@@ -131,8 +131,6 @@ namespace Aadev.JTF.Editor.EditorItems
                 Controls.Remove(textBox);
                 textBox = null;
             };
-
-          
         }
     }
 }

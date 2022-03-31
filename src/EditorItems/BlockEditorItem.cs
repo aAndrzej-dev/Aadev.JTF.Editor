@@ -14,9 +14,15 @@ namespace Aadev.JTF.Editor.EditorItems
         private new JtBlock Type => (JtBlock)base.Type;
 
 
-        private JObject? RawValue
+        private JObject RawValue
         {
-            get => _value?.Type is JTokenType.Object ? ((JObject?)_value ?? new JObject()) : (_value?.Type is JTokenType.Null ? new JObject() : null);
+            get
+            {
+                if (_value is not JObject)
+                    _value = new JObject();
+                return (JObject)_value;
+            }
+
             set => _value = value is not null ? value : _value;
         }
         public override JToken Value
@@ -32,6 +38,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         internal BlockEditorItem(JtToken type, JToken? token) : base(type, token) { }
 
+
         protected override void OnExpandChanged()
         {
             if (!Expanded)
@@ -42,9 +49,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 base.OnExpandChanged();
                 return;
             }
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
-            RawValue ??= new JObject();
             y = 38;
 
             List<string> Twins = new();
@@ -57,29 +63,26 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 if (twinFamily.Length > 1)
                 {
-
-
                     if (Twins.Contains(item.Name!))
                     {
                         continue;
                     }
 
-                    IEnumerable<JtToken>? t = twinFamily.Where(x => x.JsonType == RawValue?[item.Name!]?.Type);
+                    JtToken? t = twinFamily.FirstOrDefault(x => x.JsonType == RawValue[item.Name!]?.Type);
 
-                    if (t is null || t?.Count() == 0)
+                    if (t is null)
                     {
                         y = CreateBei(item, y);
                         Twins.Add(item.Name!);
 
                         continue;
                     }
-                    y = CreateBei(t!.First(), y);
+                    y = CreateBei(t, y);
                     Twins.Add(item.Name!);
                     continue;
 
 
 
-    
 
 
                 }
@@ -120,21 +123,17 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private int CreateBei(JtToken type, int y, bool resizeOnCreate = false)
         {
-            EditorItem? bei;
+            EditorItem bei;
             if (resizeOnCreate)
             {
-                RawValue![type.Name!] = null;
+                RawValue[type.Name!] = null;
                 bei = Create(type, null);
             }
             else
             {
-                bei = Create(type, RawValue?[type.Name!]);
+                bei = Create(type, RawValue[type.Name!]);
             }
 
-            if (bei is null)
-            {
-                return y;
-            }
 
             bei.Location = new System.Drawing.Point(10, y);
             bei.Width = Width - 20;
@@ -154,15 +153,15 @@ namespace Aadev.JTF.Editor.EditorItems
             {
 
 
-                if (bei.Value?.Type is JTokenType.Null || bei.Value is null)
+                if (bei.Value.Type is JTokenType.Null)
                 {
 
-                    RawValue?.Remove(bei.Type.Name!);
+                    RawValue.Remove(bei.Type.Name!);
                 }
 
                 else
                 {
-                    RawValue![bei.Type.Name!] = bei.Value;
+                    RawValue[bei.Type.Name!] = bei.Value;
 
 
                 }

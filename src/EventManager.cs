@@ -20,12 +20,15 @@ namespace Aadev.JTF.Editor
 
         public bool InvokeEvent(string Id, object? Value)
         {
-            if (!chnagedEvents.Any(x => x.Id == Id))
+            ChangedEvent? ce = chnagedEvents.FirstOrDefault(x => x.Id == Id);
+
+
+            if (ce is null)
             {
                 return false;
             }
 
-            chnagedEvents.FirstOrDefault(x => x.Id == Id)?.Invoke(Value);
+            ce.Invoke(Value);
             return true;
         }
         public ChangedEvent? GetEvent(string Id) => chnagedEvents.FirstOrDefault(x => x.Id == Id);

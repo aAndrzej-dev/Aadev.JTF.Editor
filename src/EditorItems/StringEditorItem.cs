@@ -41,7 +41,7 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnPaint(e);
 
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
 
 
@@ -86,7 +86,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void CreateValue() => Value = Type.Default;
         private void CreateTextBox()
         {
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
             if (textBox is not null)
             {

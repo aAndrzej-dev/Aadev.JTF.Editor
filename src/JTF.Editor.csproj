@@ -14,11 +14,11 @@
 	<AssemblyVersion>1.0.0.0</AssemblyVersion>
     <PackageReleaseNotes>Initial release</PackageReleaseNotes>
 	<FileVersion>1.0.0.0</FileVersion>
-	<Version>1.0.0-alpha2</Version>
+	<Version>1.0.0-alpha3</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Fixed bug when adding new item to array</PackageReleaseNotes>
+    <PackageReleaseNotes>Some bug fixes</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
@@ -28,7 +28,7 @@
 
 	
   <ItemGroup>
-    <PackageReference Include="Aadev.JTF" Version="1.0.0-beta1" />
+    <PackageReference Include="Aadev.JTF" Version="1.0.0-beta2" />
   </ItemGroup>
 
   <ItemGroup>

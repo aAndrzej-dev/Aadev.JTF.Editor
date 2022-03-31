@@ -1,5 +1,6 @@
 ﻿using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -35,31 +36,33 @@ namespace Aadev.JTF.Editor.EditorItems
 
             Graphics g = e.Graphics;
 
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
 
             addNewButtonBounds = new Rectangle(Width - 30 - xRightOffset, 1, 30, 30);
             g.FillRectangle(new SolidBrush(Color.Green), addNewButtonBounds);
-            Pen pen = new(Color.White);
-            g.DrawLine(pen, Width - 30 - xRightOffset + 15, 8, Width - 30 - xRightOffset + 15, 24);
-            g.DrawLine(pen, Width - 30 - xRightOffset + 7, 16, Width - 30 - xRightOffset + 23, 16);
+            g.DrawLine(WhitePen, Width - 30 - xRightOffset + 15, 8, Width - 30 - xRightOffset + 15, 24);
+            g.DrawLine(WhitePen, Width - 30 - xRightOffset + 7, 16, Width - 30 - xRightOffset + 23, 16);
 
 
         }
         protected override void OnExpandChanged()
         {
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
             if (!Expanded)
             {
 
                 Controls.Clear();
+                objectsArray.Clear();
+                Height = 32;
                 base.OnExpandChanged();
                 return;
             }
 
             y = 38;
 
+            EnsureValue();
 
             if (Type.MakeAsObject)
                 LoadAsObject();
@@ -69,8 +72,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
             base.OnExpandChanged();
         }
+
         protected override void OnControlRemoved(ControlEventArgs e)
         {
+            if (!Expanded)
+                return;
 
             EditorItem bei = (EditorItem)e.Control;
             if (Type.MakeAsObject)
@@ -92,6 +98,10 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
+
+            if (IsInvalidValueType)
+                return;
+
             if (addNewButtonBounds.Contains(e.Location))
             {
                 EnsureValue();
@@ -103,14 +113,22 @@ namespace Aadev.JTF.Editor.EditorItems
                 OnValueChanged();
             }
         }
-        protected override void OnMouseMove(MouseEventArgs e) => Cursor = addNewButtonBounds.Contains(e.Location) ? Cursors.Hand : Cursors.Default;
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            if (addNewButtonBounds.Contains(e.Location))
+            {
+                Cursor = Cursors.Hand;
+                return;
+            }
+            base.OnMouseMove(e);
+        }
+
         protected override void CreateValue() => Value = Type.MakeAsObject ? new JObject() : new JArray();
 
         private void EnsureValue()
         {
-            if ((Type.MakeAsObject && Value is not JObject) || (!Type.MakeAsObject && Value is not JArray))
+            if (Value.Type != Type.JsonType)
                 CreateValue();
-
         }
 
 
@@ -140,25 +158,22 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void LoadAsArray()
         {
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
-            Value ??= new JArray();
 
-            if (Value is not JArray value)
-                value = new JArray();
 
-            int index = 0;
-            foreach (JToken item in value)
+            JArray array = (JArray)Value;
+
+            for (int i = 0; i < array.Count; i++)
             {
-                CreateArrayItem(index, item);
-                index++;
+                CreateArrayItem(i, array[i]);
             }
         }
         private void LoadAsObject()
         {
-            if (InvalidValueType)
+            if (IsInvalidValueType)
                 return;
-            Value ??= new JObject();
+
             foreach (JProperty item in ((JObject)Value).Properties())
             {
                 CreateObjectItem(item);
@@ -166,10 +181,8 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateArrayItem(int index, JToken? itemValue = null)
         {
-            if (InvalidValueType)
-                return;
-            EditorItem? bei = Create(Type.Prefabs[0], itemValue);
-            if (bei is null) return;
+
+            EditorItem bei = Create(Type.Prefabs[0], itemValue);
 
             JArray value = (JArray)Value;
 
@@ -206,7 +219,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 if (Value is not JArray array) return;
 
-                if (array?.Count <= index)
+                if (array.Count <= index)
                 {
                     while (array.Count < index)
                     {
@@ -216,7 +229,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
                 else
                 {
-                    array![index] = bei.Value;
+                    array[index] = bei.Value;
                 }
 
                 OnValueChanged();
@@ -232,16 +245,19 @@ namespace Aadev.JTF.Editor.EditorItems
                 Height = y;
             }
         }
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            foreach (Control item in Controls)
+            {
+                item.Width = Width - 20;
+            }
+
+        }
         private void CreateObjectItem(JProperty? item = null)
         {
-            if (InvalidValueType)
-                return;
-            EditorItem? bei = Create(Type.Prefabs[0], null); 
+            EditorItem bei = Create(Type.Prefabs[0], null);
 
-            if (bei is null)
-            {
-                return;
-            }
 
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
@@ -250,15 +266,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (item is null)
             {
-                newDynamicName = "new " + Type.Name + " item";
-                if (objectsArray.ContainsKey("new " + Type.Name + " item"))
+                newDynamicName = $"new {Type.Name} item";
+                if (objectsArray.ContainsKey(newDynamicName))
                 {
                     int i = 1;
-                    while (objectsArray.ContainsKey("new " + Type.Name + " item " + i))
+                    while (objectsArray.ContainsKey($"new {Type.Name} item {i}"))
                     {
                         i++;
                     }
-                    newDynamicName = "new " + Type.Name + " item " + i;
+                    newDynamicName = $"new {Type.Name} item {i}";
 
 
                 }
@@ -288,13 +304,16 @@ namespace Aadev.JTF.Editor.EditorItems
             bei.ValueChanged += (s, ev) =>
             {
                 if (Value is not JObject obj) return;
+
+
+
                 KeyValuePair<string, EditorItem> keyValuePair = objectsArray.First(x => x.Value == bei);
 
                 if (bei.DynamicName != keyValuePair.Key)
                 {
                     if (objectsArray.ContainsKey(bei.DynamicName!))
                     {
-                        MessageBox.Show("This name allreaby exist: " + bei.DynamicName, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"This name allreaby exist: {bei.DynamicName}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         bei.DynamicName = keyValuePair.Key;
                         return;
                     }
