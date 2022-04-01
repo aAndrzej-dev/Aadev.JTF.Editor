@@ -29,7 +29,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private new JtBool Type => (JtBool)base.Type;
 
-        internal BoolEditorItem(JtToken type, JToken? token) : base(type, token) { }
+        internal BoolEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
         protected override void OnPaint(PaintEventArgs e)
         {

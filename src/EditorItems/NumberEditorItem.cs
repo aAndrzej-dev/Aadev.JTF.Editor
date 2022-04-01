@@ -29,7 +29,8 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal NumberEditorItem(JtToken type, JToken? token) : base(type, token) { }
+        internal NumberEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+
 
 
         protected override void OnPaint(PaintEventArgs e)

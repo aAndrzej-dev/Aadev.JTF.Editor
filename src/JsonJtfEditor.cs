@@ -111,16 +111,17 @@ namespace Aadev.JTF.Editor
             if (resizeOnCreate)
             {
                 Root![type.Name!] = null;
-                bei = EditorItem.Create(type, null);
+                bei = EditorItem.Create(type, null, eventManager);
             }
             else
             {
-                bei = EditorItem.Create(type, Root![type.Name!]);
+                bei = EditorItem.Create(type, Root![type.Name!], eventManager);
             }
 
 
             bei.Location = new System.Drawing.Point(10, y);
             bei.Width = Width - 20;
+            bei.CreateEventHandlers();
             Controls.Add(bei);
             if (resizeOnCreate)
             {

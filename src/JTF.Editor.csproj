@@ -12,9 +12,8 @@
 	<Nullable>enable</Nullable>
 	<DebugType>embedded</DebugType>
 	<AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
 	<FileVersion>1.0.0.0</FileVersion>
-	<Version>1.0.0-alpha3</Version>
+	<Version>1.0.0-alpha4</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

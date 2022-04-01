@@ -36,7 +36,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal BlockEditorItem(JtToken type, JToken? token) : base(type, token) { }
+        internal BlockEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
 
         protected override void OnExpandChanged()
@@ -92,7 +92,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }
 
-            Height = y + 10;
+            Height = y + 5;
 
 
 
@@ -127,16 +127,17 @@ namespace Aadev.JTF.Editor.EditorItems
             if (resizeOnCreate)
             {
                 RawValue[type.Name!] = null;
-                bei = Create(type, null);
+                bei = Create(type, null, EventManager);
             }
             else
             {
-                bei = Create(type, RawValue[type.Name!]);
+                bei = Create(type, RawValue[type.Name!], EventManager);
             }
 
 
             bei.Location = new System.Drawing.Point(10, y);
             bei.Width = Width - 20;
+            bei.CreateEventHandlers();
             Controls.Add(bei);
             if (resizeOnCreate)
             {
@@ -185,6 +186,13 @@ namespace Aadev.JTF.Editor.EditorItems
 
             return y;
         }
-
+        internal override void CreateEventHandlers()
+        {
+            base.CreateEventHandlers();
+            foreach (EditorItem item in Controls)
+            {
+                item.CreateEventHandlers();
+            }
+        }
     }
 }

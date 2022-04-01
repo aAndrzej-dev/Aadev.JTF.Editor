@@ -11,13 +11,12 @@ namespace Aadev.JTF.Editor.EditorItems
 
         protected bool IsInvalidValueType => Value.Type is not JTokenType.Null && (Value.Type != Type.JsonType);
 
-        private EventManager? eventManager;
         private readonly JtToken[] twinsFamily;
         private string? dynamicName;
         private int oldHeight;
         private bool expanded;
-        private bool isFirstPaint = true;
 
+        protected bool AreEventHandlersCreated { get; private set; }
         protected int xOffset = 0;
         protected int xRightOffset = 0;
         protected TextBox? tbDynamicName;
@@ -33,38 +32,23 @@ namespace Aadev.JTF.Editor.EditorItems
         public event EventHandler? HeightChanged;
 
 
-
+        internal int ArrayIndex { get; set; } = -1;
         public abstract JToken Value { get; set; }
         public JtToken Type { get; }
-        public EventManager EventManager
-        {
-            get
-            {
-                if (Type.IsArrayPrefab)
-                {
-                    return eventManager ??= new EventManager();
-                }
-                if (Parent is IHaveEventManager parent)
-                    return parent.EventManager;
-
-                throw new Exception($"Invalid parent type {Parent.GetType()}");
-            }
-        }
+        public EventManager EventManager { get; private set; }
 
         public string? DynamicName { get => dynamicName; set { dynamicName = value; Invalidate(); } }
-        protected bool Expanded { get => expanded; set { expanded = value; OnExpandChanged(); } }
+        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = value; OnExpandChanged(); } }
 
         protected abstract void CreateValue();
-        protected void OnValueChanged()
-        {
-            ValueChanged?.Invoke(this, EventArgs.Empty);
-        }
+        protected void OnValueChanged() => ValueChanged?.Invoke(this, EventArgs.Empty);
         protected virtual void OnExpandChanged() => Invalidate();
 
-        protected EditorItem(JtToken type, JToken? token)
+        protected EditorItem(JtToken type, JToken? token, EventManager eventManager)
         {
             Type = type;
             Value = token ?? JValue.CreateNull();
+            EventManager = eventManager;
 
             twinsFamily = Type.GetTwinFamily();
 
@@ -79,36 +63,24 @@ namespace Aadev.JTF.Editor.EditorItems
 
             twinFamilyButtonBounds = new Rectangle(0, 1, twinsFamily.Length * 30, 30);
 
-        }
-
-        public static EditorItem Create(JtToken type, JToken? token)
-        {
-            if (type.Type == JtTokenType.Bool) return new BoolEditorItem(type, token);
-            if (type.Type == JtTokenType.String) return new StringEditorItem(type, token);
-            if (type.Type.IsNumericType) return new NumberEditorItem(type, token);
-            if (type.Type == JtTokenType.Enum) return new EnumEditorItem(type, token);
-            if (type.Type == JtTokenType.Block) return new BlockEditorItem(type, token);
-            if (type.Type == JtTokenType.Array) return new ArrayEditorItem(type, token);
-
-            throw new ArgumentOutOfRangeException(nameof(type));
-        }
-
-        protected override void OnParentChanged(EventArgs e)
-        {
-            base.OnParentChanged(e);
-
-            if (Parent is null)
-                return;
-
-            if (Parent is not IHaveEventManager)
-                throw new Exception($"Cannot add EditorItem to {Parent.GetType()}");
 
             EventManager.RegistryEvent(Type.Id, Value);
 
             ValueChanged += (s, ev) => EventManager.GetEvent(Type.Id)?.Invoke(Value);
-
-
         }
+
+        public static EditorItem Create(JtToken type, JToken? token, EventManager eventManager)
+        {
+            if (type.Type == JtTokenType.Bool) return new BoolEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.String) return new StringEditorItem(type, token, eventManager);
+            if (type.Type.IsNumericType) return new NumberEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.Enum) return new EnumEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.Block) return new BlockEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.Array) return new ArrayEditorItem(type, token, eventManager);
+
+            throw new ArgumentOutOfRangeException(nameof(type));
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             xOffset = 1;
@@ -134,7 +106,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
             }
 
-            if ((Type.Type.IsContainerType) && !IsInvalidValueType)
+            if (Type.Type.IsContainerType && !IsInvalidValueType)
             {
                 g.FillRectangle(new SolidBrush(Color.Green), xOffset, 1, 30, 30);
 
@@ -167,6 +139,18 @@ namespace Aadev.JTF.Editor.EditorItems
                 xOffset += (int)nameSize.Width;
                 xOffset += 20;
             }
+
+            if (ArrayIndex != -1)
+            {
+                xOffset += 10;
+                SizeF nameSize = g.MeasureString(ArrayIndex.ToString(), Font);
+
+                g.DrawString(ArrayIndex.ToString(), Font, new SolidBrush(ForeColor), new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
+
+                xOffset += (int)nameSize.Width;
+                xOffset += 10;
+            }
+
 
             if (Type.IsArrayPrefab)
             {
@@ -241,35 +225,38 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
 
-            if (isFirstPaint)
-            {
-                isFirstPaint = false;
-
-                if (Type.Conditions.Count > 0)
-                {
-
-                    ChangedEvent? ce = EventManager.GetEvent(Type.Conditions[0].VariableId!);
-
-                    if (ce is null)
-                    {
-                        throw new Exception($"Invalid event id: {Type.Conditions[0].VariableId}");
-                    }
-
-                    if (Type.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()!) is false)
-                    {
-                        Height = 0;
-                    }
-                    ce.Event += (s, ev) => Height = Type.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) ? 32 : 0;
-
-                }
-                else
-                {
-                    Height = 32;
-                }
-            }
-
-
         }
+
+
+
+        internal virtual void CreateEventHandlers()
+        {
+            if (AreEventHandlersCreated)
+                return;
+
+            AreEventHandlersCreated = true;
+
+
+            if (Type.Conditions.Count > 0)
+            {
+
+                ChangedEvent? ce = EventManager.GetEvent(Type.Conditions[0].VariableId!);
+
+                if (ce is null)
+                {
+                    throw new Exception($"Invalid event id: {Type.Conditions[0].VariableId}");
+                }
+
+                Height = Type.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true ? 32 : 0;
+                ce.Event += (s, ev) => Height = Type.Conditions.Check(JtConditionCollection.CheckOperation.Or, ev.Value?.ToString()) ? 32 : 0;
+            }
+            else
+            {
+                Height = 32;
+            }
+        }
+
+
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);

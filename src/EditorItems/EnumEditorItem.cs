@@ -31,7 +31,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-        internal EnumEditorItem(JtToken type, JToken? token) : base(type, token)
+        internal EnumEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
         }
 

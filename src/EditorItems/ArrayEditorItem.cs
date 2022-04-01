@@ -28,22 +28,33 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        public ArrayEditorItem(JtToken type, JToken? token) : base(type, token) { }
+        public ArrayEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
 
-            Graphics g = e.Graphics;
-
             if (IsInvalidValueType)
                 return;
+            Graphics g = e.Graphics;
+
 
             addNewButtonBounds = new Rectangle(Width - 30 - xRightOffset, 1, 30, 30);
             g.FillRectangle(new SolidBrush(Color.Green), addNewButtonBounds);
             g.DrawLine(WhitePen, Width - 30 - xRightOffset + 15, 8, Width - 30 - xRightOffset + 15, 24);
             g.DrawLine(WhitePen, Width - 30 - xRightOffset + 7, 16, Width - 30 - xRightOffset + 23, 16);
+            xRightOffset += 30;
 
+
+            string msg = $"{Value.Count()} elements";
+
+            SizeF msgSize = g.MeasureString(msg, Font);
+
+            g.DrawString(msg, Font, new SolidBrush(ForeColor), new PointF(Width - xRightOffset - 10 - msgSize.Width, 16 - msgSize.Height / 2));
+
+            xRightOffset += (int)msgSize.Width;
+
+            
 
         }
         protected override void OnExpandChanged()
@@ -78,6 +89,10 @@ namespace Aadev.JTF.Editor.EditorItems
             if (!Expanded)
                 return;
 
+
+
+
+
             EditorItem bei = (EditorItem)e.Control;
             if (Type.MakeAsObject)
             {
@@ -88,10 +103,12 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             else
             {
-                ((JArray?)Value)?.RemoveAt((int)bei.Tag);
+                ((JArray?)Value)?.RemoveAt(bei.ArrayIndex);
             }
 
-            y = BeiResize(e.Control);
+
+            BeiResize(bei);
+            y += 5;
             Height = y;
             base.OnControlRemoved(e);
         }
@@ -104,11 +121,17 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (addNewButtonBounds.Contains(e.Location))
             {
+
+                Expanded = true;
+                y -= 5;
                 EnsureValue();
                 if (Type.MakeAsObject)
                     CreateObjectItem();
                 else
                     CreateArrayItem(((JArray)Value).Count);
+
+                y += 5;
+                Height = y;
 
                 OnValueChanged();
             }
@@ -132,35 +155,34 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
 
-        private int BeiResize(Control bei)
+        private void BeiResize(EditorItem bei)
         {
+
+            SuspendLayout();
             int oy = bei.Top;
             int index = 0;
             if (!Type.MakeAsObject)
             {
-                index = (int)bei.Tag;
+                index = bei.ArrayIndex;
             }
 
-            foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
+            foreach (EditorItem control in Controls.Cast<EditorItem>().Where(x => x.Top > bei.Top))
             {
                 control.Top = oy;
                 oy += control.Height;
                 oy += 5;
                 if (!Type.MakeAsObject)
                 {
-                    control.Tag = index;
+                    control.ArrayIndex = index;
                     index++;
                 }
 
             }
             y = oy;
-            return y;
+            ResumeLayout();
         }
         private void LoadAsArray()
         {
-            if (IsInvalidValueType)
-                return;
-
 
             JArray array = (JArray)Value;
 
@@ -168,30 +190,37 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 CreateArrayItem(i, array[i]);
             }
+            y += 5;
+            if (Expanded)
+            {
+                Height = y;
+            }
         }
         private void LoadAsObject()
         {
-            if (IsInvalidValueType)
-                return;
-
             foreach (JProperty item in ((JObject)Value).Properties())
             {
                 CreateObjectItem(item);
+            }
+            y += 5;
+            if (Expanded)
+            {
+                Height = y;
             }
         }
         private void CreateArrayItem(int index, JToken? itemValue = null)
         {
 
-            EditorItem bei = Create(Type.Prefabs[0], itemValue);
+            EditorItem bei = Create(Type.Prefabs[0], itemValue, new EventManager());
 
             JArray value = (JArray)Value;
 
 
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
+            bei.CreateEventHandlers();
 
-
-            bei.Tag = index;
+            bei.ArrayIndex = index;
             if (itemValue is null)
                 value.Add(bei.Value);
 
@@ -215,13 +244,13 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.ValueChanged += (s, ev) =>
             {
-                int ind = (int)bei.Tag;
+                int ind = bei.ArrayIndex;
 
                 if (Value is not JArray array) return;
 
-                if (array.Count <= index)
+                if (array.Count <= ind)
                 {
-                    while (array.Count < index)
+                    while (array.Count < ind)
                     {
                         array.Add(JValue.CreateNull());
                     }
@@ -229,7 +258,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
                 else
                 {
-                    array[index] = bei.Value;
+                    array[ind] = bei.Value;
                 }
 
                 OnValueChanged();
@@ -237,13 +266,12 @@ namespace Aadev.JTF.Editor.EditorItems
 
             };
 
-
-            y += 10;
-            y += bei.Height;
-            if (Expanded)
+            if (bei.Height != 0)
             {
-                Height = y;
+                y += bei.Height + 5;
             }
+
+
         }
         protected override void OnResize(EventArgs e)
         {
@@ -256,12 +284,12 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateObjectItem(JProperty? item = null)
         {
-            EditorItem bei = Create(Type.Prefabs[0], null);
+            EditorItem bei = Create(Type.Prefabs[0], null, new EventManager());
 
 
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
-
+            bei.CreateEventHandlers();
             string newDynamicName = string.Empty;
 
             if (item is null)
@@ -337,12 +365,21 @@ namespace Aadev.JTF.Editor.EditorItems
             ((JObject)Value)[bei.DynamicName!] = bei.Value;
 
 
-            y += 10;
-            y += bei.Height;
-            if (Expanded)
+            if (bei.Height != 0)
             {
-                Height = y;
+                y += bei.Height + 5;
+            }
+
+        }
+
+        internal override void CreateEventHandlers()
+        {
+            base.CreateEventHandlers();
+            foreach (EditorItem item in Controls)
+            {
+                item.CreateEventHandlers();
             }
         }
     }
+
 }

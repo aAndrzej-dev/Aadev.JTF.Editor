@@ -32,10 +32,11 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
 
-        internal StringEditorItem(JtToken type, JToken? token) : base(type, token)
+        internal StringEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
             SetStyle(ControlStyles.Selectable, true);
         }
+
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -118,8 +119,8 @@ namespace Aadev.JTF.Editor.EditorItems
             };
 
             Controls.Add(textBox);
-            textBox.Focus();
-            textBox.SelectAll();
+            textBox?.Focus();
+            textBox?.SelectAll();
         }
     }
 }
