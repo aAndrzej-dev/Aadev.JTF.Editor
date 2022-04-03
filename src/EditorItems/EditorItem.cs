@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor.EditorItems
@@ -8,23 +9,29 @@ namespace Aadev.JTF.Editor.EditorItems
     internal abstract partial class EditorItem : UserControl, IHaveEventManager
     {
         protected static Pen WhitePen = new Pen(Color.White);
+        protected virtual bool IsFocused => Focused;
 
         protected bool IsInvalidValueType => Value.Type is not JTokenType.Null && (Value.Type != Type.JsonType);
 
-        private readonly JtToken[] twinsFamily;
         private string? dynamicName;
         private int oldHeight;
         private bool expanded;
 
+
         protected bool AreEventHandlersCreated { get; private set; }
+        protected readonly JtToken[] twinsFamily;
         protected int xOffset = 0;
         protected int xRightOffset = 0;
+        protected int yOffset = 0;
+        protected int innerHeight = 0;
         protected TextBox? tbDynamicName;
         protected Rectangle expandButtonBounds = Rectangle.Empty;
         protected Rectangle removeButtonBounds = Rectangle.Empty;
         protected Rectangle discardInvalidTypeButtonBounds = Rectangle.Empty;
         protected Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
         protected Rectangle twinFamilyButtonBounds = Rectangle.Empty;
+        protected Rectangle nameLabelBounds = Rectangle.Empty;
+
 
         public event EventHandler? ValueChanged;
         public event EventHandler? DynamicNameChanged;
@@ -37,25 +44,32 @@ namespace Aadev.JTF.Editor.EditorItems
         public JtToken Type { get; }
         public EventManager EventManager { get; private set; }
 
+        internal abstract bool IsSaveable { get; }
+
+
         public string? DynamicName { get => dynamicName; set { dynamicName = value; Invalidate(); } }
         protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = value; OnExpandChanged(); } }
 
-        protected abstract void CreateValue();
+        protected abstract JToken CreateValue();
         protected void OnValueChanged() => ValueChanged?.Invoke(this, EventArgs.Empty);
-        protected virtual void OnExpandChanged() => Invalidate();
+        protected virtual void OnExpandChanged()
+        {
+            Focus();
+            Invalidate();
+
+        }
 
         protected EditorItem(JtToken type, JToken? token, EventManager eventManager)
         {
             Type = type;
-            Value = token ?? JValue.CreateNull();
+            Value = token ?? ((Type.Required || Type.IsArrayPrefab) ? CreateValue() : JValue.CreateNull());
             EventManager = eventManager;
 
             twinsFamily = Type.GetTwinFamily();
 
             InitializeComponent();
             oldHeight = Height;
-            SetStyle(ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint, true);
-
+            SetStyle(ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.Selectable, true);
 
             Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right;
 
@@ -81,23 +95,56 @@ namespace Aadev.JTF.Editor.EditorItems
             throw new ArgumentOutOfRangeException(nameof(type));
         }
 
+
+        protected override void OnGotFocus(EventArgs e)
+        {
+            base.OnGotFocus(e);
+            Invalidate();
+        }
+        protected override void OnLostFocus(EventArgs e)
+        {
+            base.OnLostFocus(e);
+            Invalidate();
+        }
         protected override void OnPaint(PaintEventArgs e)
         {
-            xOffset = 1;
-            xRightOffset = 1;
+
             Graphics g = e.Graphics;
-            ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), Color.FromArgb(200, 200, 200), ButtonBorderStyle.Solid);
+
+            if (IsFocused)
+            {
+                ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid, Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid, Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid, Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid);
+                xOffset = 2;
+                xRightOffset = 2;
+
+                yOffset = 2;
+                innerHeight = 28;
+            }
+
+            else
+            {
+                ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), Color.FromArgb(200, 200, 200), ButtonBorderStyle.Solid);
+                xOffset = 1;
+                xRightOffset = 1;
+                yOffset = 1;
+                innerHeight = 30;
+            }
 
 
 
             foreach (JtToken item in twinsFamily)
             {
+                if (Type.IsArrayPrefab && Type != item)
+                {
+                    continue;
+                }
+
                 Bitmap? bmp = Properties.Resources.ResourceManager.GetObject(item.Type.Name) as Bitmap;
                 if (bmp is not null)
                 {
                     if (Type == item)
                     {
-                        g.FillRectangle(new SolidBrush(Color.RoyalBlue), xOffset, 1, 30, 30);
+                        g.FillRectangle(new SolidBrush(Color.RoyalBlue), xOffset, yOffset, 30, innerHeight);
                     }
 
                     g.DrawImage(bmp, xOffset + 8, 8, 16, 16);
@@ -108,7 +155,9 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Type.Type.IsContainerType && !IsInvalidValueType)
             {
-                g.FillRectangle(new SolidBrush(Color.Green), xOffset, 1, 30, 30);
+                expandButtonBounds = new Rectangle(xOffset, yOffset, 30, innerHeight);
+
+                g.FillRectangle(new SolidBrush(Color.Green), expandButtonBounds);
 
 
 
@@ -122,30 +171,37 @@ namespace Aadev.JTF.Editor.EditorItems
                     g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
                     g.DrawLine(WhitePen, xOffset + 15, 12, xOffset + 15, 20);
                 }
-                expandButtonBounds = new Rectangle(xOffset, 0, 30, 30);
                 xOffset += 30;
             }
 
 
             if (!string.IsNullOrWhiteSpace(Type.DisplayName))
             {
+                int x = xOffset;
                 xOffset += 20;
 
+                string dn = ConvertToFriendlyName(Type.DisplayName);
 
-                SizeF nameSize = g.MeasureString(Type.DisplayName, Font);
+                SizeF nameSize = g.MeasureString(dn, Font);
 
-                g.DrawString(Type.DisplayName, Font, new SolidBrush(ForeColor), new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
+
+                g.DrawString(dn, Font, new SolidBrush(ForeColor), new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
 
                 xOffset += (int)nameSize.Width;
+
                 xOffset += 20;
+                nameLabelBounds = new Rectangle(x, 1, xOffset - x, 30);
             }
 
             if (ArrayIndex != -1)
             {
                 xOffset += 10;
-                SizeF nameSize = g.MeasureString(ArrayIndex.ToString(), Font);
 
-                g.DrawString(ArrayIndex.ToString(), Font, new SolidBrush(ForeColor), new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
+                string arrind = ArrayIndex.ToString();
+
+                SizeF nameSize = g.MeasureString(arrind, Font);
+
+                g.DrawString(arrind, Font, new SolidBrush(ForeColor), new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
 
                 xOffset += (int)nameSize.Width;
                 xOffset += 10;
@@ -154,7 +210,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Type.IsArrayPrefab)
             {
-                removeButtonBounds = new Rectangle(Width - 31, 1, 30, 30);
+                removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
                 g.FillRectangle(new SolidBrush(Color.Red), removeButtonBounds);
 
                 g.DrawLine(WhitePen, Width - 20, 12, Width - 12, 20);
@@ -167,8 +223,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 if (Type.Type.IsContainerType)
                 {
-                    e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), xOffset, 1, Width - xOffset - xRightOffset, 30);
-                    dynamicNameTextboxBounds = new Rectangle(xOffset, 0, Width - xOffset - xRightOffset, 32);
+                    dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
+                    e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
 
                     if (tbDynamicName is null)
                     {
@@ -182,8 +238,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 {
                     int size = (Width - xOffset) / 2;
 
-                    e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), xOffset, 1, size, 30);
-                    dynamicNameTextboxBounds = new Rectangle(xOffset, 0, size, 32);
+                    dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, size, innerHeight);
+                    e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
                     if (tbDynamicName is null)
                     {
 
@@ -212,11 +268,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 SizeF dsf = g.MeasureString(discardMessage, Font);
 
-                g.FillRectangle(new SolidBrush(Color.Red), xOffset, 1, dsf.Width + 10, 30);
+                discardInvalidTypeButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
+                g.FillRectangle(new SolidBrush(Color.Red), discardInvalidTypeButtonBounds);
                 g.DrawString(discardMessage, Font, new SolidBrush(Color.White), xOffset + 5, 16 - dsf.Height / 2);
 
 
-                discardInvalidTypeButtonBounds = new Rectangle(xOffset, 0, (int)dsf.Width + 10, 32);
 
                 xOffset += (int)sf.Width + 20;
 
@@ -312,9 +368,34 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnMouseMove(e);
 
+
+
+            if (nameLabelBounds.Contains(e.Location))
+            {
+                Cursor = Cursors.Help;
+                if (JsonJtfEditor.toolTip.Active)
+                    return;
+                JsonJtfEditor.toolTip.Active = true;
+
+                JsonJtfEditor.toolTip.Show($"{Type.Name}\n{Type.Description}", this);
+                return;
+            }
+            else
+            {
+                if (JsonJtfEditor.toolTip.Active)
+                {
+
+                    JsonJtfEditor.toolTip.Active = false;
+                    JsonJtfEditor.toolTip.Hide(this);
+                }
+            }
+
+
             Cursor = expandButtonBounds.Contains(e.Location) || removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location)
                 ? Cursors.Hand
                 : Cursors.Default;
+            if (dynamicNameTextboxBounds.Contains(e.Location))
+                Cursor = Cursors.IBeam;
 
         }
 
@@ -361,6 +442,43 @@ namespace Aadev.JTF.Editor.EditorItems
         public class TwinChangedEventArgs : EventArgs
         {
             public JtToken? NewTwinType { get; set; }
+        }
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (IsInvalidValueType)
+                return;
+
+            if (Type.Type.IsContainerType && e.KeyCode == Keys.Space)
+            {
+                Expanded = !Expanded;
+            }
+        }
+        protected static string ConvertToFriendlyName(string name)
+        {
+            if (name.Length == 0)
+                return string.Empty;
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append(char.ToUpper(name[0]));
+            for (int i = 1; i < name.Length; i++)
+            {
+                if (name[i] == '_')
+                {
+                    sb.Append(' ');
+                    if (name.Length <= i + 1)
+                    {
+                        continue;
+                    }
+                    i++;
+                    sb.Append(char.ToUpper(name[i]));
+                    continue;
+                }
+                sb.Append(name[i]);
+            }
+            return sb.ToString();
         }
     }
 }

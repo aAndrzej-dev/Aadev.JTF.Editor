@@ -10,6 +10,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Type.Values.Contains(RawValue);
         private JToken _value = JValue.CreateNull();
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
+        private Rectangle comboBoxBounds = Rectangle.Empty;
         private ComboBox? comboBox;
 
         private new JtEnum Type => (JtEnum)base.Type;
@@ -29,8 +30,8 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-
-
+        protected override bool IsFocused => Focused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
+        internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
         internal EnumEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
         }
@@ -60,11 +61,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 SizeF dsf = e.Graphics.MeasureString(discardMessage, Font);
 
-                e.Graphics.FillRectangle(new SolidBrush(Color.Red), xOffset, 1, dsf.Width + 10, 30);
+                discardInvalidValueButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
+                e.Graphics.FillRectangle(new SolidBrush(Color.Red), discardInvalidValueButtonBounds);
                 e.Graphics.DrawString(discardMessage, Font, new SolidBrush(Color.White), xOffset + 5, 16 - dsf.Height / 2);
 
 
-                discardInvalidValueButtonBounds = new Rectangle(xOffset, 0, (int)dsf.Width + 10, 32);
 
                 xOffset += (int)sf.Width + 20;
 
@@ -72,8 +73,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             }
 
-
-            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), xOffset, 1, Width - xOffset - xRightOffset, 30);
+            comboBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
+            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), comboBoxBounds);
 
 
             if (comboBox == null)
@@ -85,12 +86,12 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        protected override void OnClick(EventArgs e)
+
+        protected override void OnGotFocus(EventArgs e)
         {
-            base.OnClick(e);
+            base.OnGotFocus(e);
             CreateComboBox();
         }
-
         private void CreateComboBox()
         {
             if (IsInvalidValueType || InvalidValue)
@@ -144,6 +145,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 Controls.Remove(comboBox);
                 comboBox = null;
+                Invalidate();
             };
         }
 
@@ -164,8 +166,14 @@ namespace Aadev.JTF.Editor.EditorItems
                 Invalidate();
                 return;
             }
+            if (comboBoxBounds.Contains(e.Location))
+            {
+                CreateComboBox();
+                Invalidate();
+                return;
+            }
             base.OnMouseClick(e);
         }
-        protected override void CreateValue() => Value = Type.Default;
+        protected override JToken CreateValue() => Value = Type.Default;
     }
 }

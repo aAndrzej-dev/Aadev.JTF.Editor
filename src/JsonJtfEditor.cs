@@ -17,6 +17,8 @@ namespace Aadev.JTF.Editor
         private EventManager eventManager;
 
 
+        internal static readonly ToolTip toolTip = new ToolTip() { BackColor = System.Drawing.Color.FromArgb(80, 80, 80), ForeColor = System.Drawing.Color.White, ShowAlways = true, Active = false };
+
         public event EventHandler? ValueChanged;
 
 

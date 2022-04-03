@@ -11,7 +11,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle falsePanelRect = Rectangle.Empty;
         private Rectangle truePanelRect = Rectangle.Empty;
 
-
+        internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (bool?)Value != Type.Default);
         private bool? RawValue
         {
             get => _value.Type == Type.JsonType ? ((bool?)_value ?? Type.Default) : (_value.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
@@ -42,12 +42,12 @@ namespace Aadev.JTF.Editor.EditorItems
 
             Graphics g = e.Graphics;
 
-            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? BackColor : Color.Red), xOffset, 1, halfWidth, Height - 2);
-            falsePanelRect = new Rectangle(xOffset, 1, halfWidth, Height - 2);
+            falsePanelRect = new Rectangle(xOffset, yOffset, halfWidth, innerHeight);
+            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? BackColor : Color.Red), falsePanelRect);
 
 
-            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? Color.Green : BackColor), xOffset + halfWidth, 1, halfWidth, Height - 2);
-            truePanelRect = new Rectangle(xOffset + halfWidth, 1, halfWidth, Height - 2);
+            truePanelRect = new Rectangle(xOffset + halfWidth, yOffset, halfWidth, innerHeight);
+            g.FillRectangle(new SolidBrush(RawValue ?? Type.Default ? Color.Green : BackColor), truePanelRect);
 
             SizeF falseLabelSize = g.MeasureString("False", Font);
 
@@ -77,7 +77,24 @@ namespace Aadev.JTF.Editor.EditorItems
                 Value = true;
                 return;
             }
+
+
         }
-        protected override void CreateValue() => Value = Type.Default;
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (IsInvalidValueType)
+                return;
+
+            if (e.KeyCode == Keys.Space)
+            {
+                if ((bool?)Value is true)
+                    Value = false;
+                else
+                    Value = true;
+            }
+        }
+        protected override JToken CreateValue() => Value = Type.Default;
     }
 }

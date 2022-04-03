@@ -12,6 +12,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private JToken _value = JValue.CreateNull();
         private Rectangle textboxBounds = Rectangle.Empty;
 
+        protected override bool IsFocused => Focused || textBox?.Focused is true;
 
         private new JtString Type => (JtString)base.Type;
 
@@ -31,10 +32,10 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-
+        internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
         internal StringEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
-            SetStyle(ControlStyles.Selectable, true);
+
         }
 
 
@@ -47,8 +48,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), xOffset, 1, Width - xOffset - xRightOffset, 30);
-            textboxBounds = new Rectangle(xOffset, 0, Width - xOffset - xRightOffset, 32);
+            textboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
+            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), textboxBounds);
 
             if (textBox is null)
             {
@@ -67,6 +68,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (textboxBounds.Contains(e.Location))
             {
                 CreateTextBox();
+                Invalidate();
             }
         }
         protected override void OnGotFocus(EventArgs e)
@@ -84,7 +86,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseMove(e);
         }
-        protected override void CreateValue() => Value = Type.Default;
+        protected override JToken CreateValue() => Value = Type.Default;
         private void CreateTextBox()
         {
             if (IsInvalidValueType)
@@ -116,6 +118,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 Controls.Remove(textBox);
                 textBox = null;
+                Invalidate();
             };
 
             Controls.Add(textBox);

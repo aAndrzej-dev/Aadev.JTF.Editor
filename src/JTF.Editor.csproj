@@ -10,14 +10,14 @@
 	<Copyright>Copyright © aAndrzej-dev 2022</Copyright>
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
-	<DebugType>embedded</DebugType>
+	<DebugType>none</DebugType>
 	<AssemblyVersion>1.0.0.0</AssemblyVersion>
 	<FileVersion>1.0.0.0</FileVersion>
-	<Version>1.0.0-alpha4</Version>
+	<Version>1.0.0-beta1</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Some bug fixes</PackageReleaseNotes>
+    <PackageReleaseNotes></PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
@@ -25,9 +25,8 @@
 		
   </PropertyGroup>
 
-	
   <ItemGroup>
-    <PackageReference Include="Aadev.JTF" Version="1.0.0-beta2" />
+    <PackageReference Include="Aadev.JTF" Version="1.0.0-beta3" />
   </ItemGroup>
 
   <ItemGroup>

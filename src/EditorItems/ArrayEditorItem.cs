@@ -14,7 +14,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private JToken _value = JValue.CreateNull();
         private int y;
         private readonly Dictionary<string, EditorItem> objectsArray = new();
-
+        private readonly ContextMenuStrip? cmsPrefabSelect;
 
         public new JtArray Type => (JtArray)base.Type;
         public override JToken Value
@@ -27,8 +27,78 @@ namespace Aadev.JTF.Editor.EditorItems
                 OnValueChanged();
             }
         }
+        internal override bool IsSaveable => Type.Required || Value.Type != JTokenType.Null;
+        public ArrayEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
+        {
+            SetStyle(ControlStyles.ContainerControl, true);
+            if (Type.Prefabs.Count <= 1)
+                return;
 
-        public ArrayEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+
+            cmsPrefabSelect = new ContextMenuStrip();
+
+
+
+
+            foreach (JtToken? item in Type.Prefabs)
+            {
+                ToolStripMenuItem? tsmi = new ToolStripMenuItem() { Text = item.Type.DisplayName, Tag = item };
+
+
+                Bitmap? bmp = Properties.Resources.ResourceManager.GetObject(item.Type.Name) as Bitmap;
+
+                if (bmp is not null)
+                    tsmi.Image = bmp;
+
+                tsmi.BackColor = Color.FromArgb(80, 80, 80);
+                tsmi.ForeColor = Color.White;
+
+                tsmi.Click += OnPrefabSelect_Click;
+                cmsPrefabSelect.Items.Add(tsmi);
+            }
+            cmsPrefabSelect.BackColor = Color.FromArgb(80, 80, 80);
+            cmsPrefabSelect.ForeColor = Color.White;
+            cmsPrefabSelect.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
+        }
+        private class DarkColorTable : ProfessionalColorTable
+        {
+            public override Color MenuBorder => Color.FromArgb(30, 30, 30);
+            public override Color MenuItemSelectedGradientBegin => Color.FromArgb(100, 100, 100);
+            public override Color MenuItemSelectedGradientEnd => Color.FromArgb(100, 100, 100);
+            public override Color MenuStripGradientBegin => Color.FromArgb(80, 80, 80);
+            public override Color MenuStripGradientEnd => Color.FromArgb(80, 80, 80);
+            public override Color MenuItemPressedGradientBegin => Color.FromArgb(80, 80, 80);
+            public override Color MenuItemPressedGradientEnd => Color.FromArgb(80, 80, 80);
+            public override Color ToolStripDropDownBackground => Color.FromArgb(80, 80, 80);
+            public override Color MenuItemSelected => Color.FromArgb(100, 100, 100);
+        }
+        private void OnPrefabSelect_Click(object? sender, EventArgs e)
+        {
+
+
+
+            if (sender is not ToolStripMenuItem control)
+                return;
+
+
+            if (control.Tag is not JtToken prefab)
+                return;
+
+
+            Expanded = true;
+            y -= 5;
+            EnsureValue();
+            if (Type.MakeAsObject)
+                CreateObjectItem();
+            else
+                CreateArrayItem(((JArray)Value).Count, prefab);
+
+            y += 5;
+            Height = y;
+
+            OnValueChanged();
+
+        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -39,7 +109,7 @@ namespace Aadev.JTF.Editor.EditorItems
             Graphics g = e.Graphics;
 
 
-            addNewButtonBounds = new Rectangle(Width - 30 - xRightOffset, 1, 30, 30);
+            addNewButtonBounds = new Rectangle(Width - 30 - xRightOffset, yOffset, 30, innerHeight);
             g.FillRectangle(new SolidBrush(Color.Green), addNewButtonBounds);
             g.DrawLine(WhitePen, Width - 30 - xRightOffset + 15, 8, Width - 30 - xRightOffset + 15, 24);
             g.DrawLine(WhitePen, Width - 30 - xRightOffset + 7, 16, Width - 30 - xRightOffset + 23, 16);
@@ -54,11 +124,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
             xRightOffset += (int)msgSize.Width;
 
-            
 
         }
         protected override void OnExpandChanged()
         {
+            Focus(); // To unfocus dynamic name textbox of child
             if (IsInvalidValueType)
                 return;
             if (!Expanded)
@@ -94,16 +164,18 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
             EditorItem bei = (EditorItem)e.Control;
+
+            EnsureValue();
             if (Type.MakeAsObject)
             {
 
                 objectsArray.Remove(bei.DynamicName!);
-                ((JObject?)Value)?.Remove(bei.DynamicName!);
+                ((JObject)Value).Remove(bei.DynamicName!);
 
             }
             else
             {
-                ((JArray?)Value)?.RemoveAt(bei.ArrayIndex);
+                ((JArray)Value).RemoveAt(bei.ArrayIndex);
             }
 
 
@@ -122,13 +194,23 @@ namespace Aadev.JTF.Editor.EditorItems
             if (addNewButtonBounds.Contains(e.Location))
             {
 
+
+
+
+
+                if (Type.Prefabs.Count > 1)
+                {
+                    cmsPrefabSelect!.Show(MousePosition);
+                    return;
+                }
                 Expanded = true;
                 y -= 5;
+
                 EnsureValue();
                 if (Type.MakeAsObject)
                     CreateObjectItem();
                 else
-                    CreateArrayItem(((JArray)Value).Count);
+                    CreateArrayItem(((JArray)Value).Count, Type.Prefabs[0]);
 
                 y += 5;
                 Height = y;
@@ -146,7 +228,7 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
 
-        protected override void CreateValue() => Value = Type.MakeAsObject ? new JObject() : new JArray();
+        protected override JToken CreateValue() => Value = Type.MakeAsObject ? new JObject() : new JArray();
 
         private void EnsureValue()
         {
@@ -188,7 +270,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             for (int i = 0; i < array.Count; i++)
             {
-                CreateArrayItem(i, array[i]);
+                CreateArrayItem(i, Type.Prefabs.FirstOrDefault(x => x.JsonType == array[i].Type) ?? Type.Prefabs[0], array[i]);
             }
             y += 5;
             if (Expanded)
@@ -208,10 +290,9 @@ namespace Aadev.JTF.Editor.EditorItems
                 Height = y;
             }
         }
-        private void CreateArrayItem(int index, JToken? itemValue = null)
+        private void CreateArrayItem(int index, JtToken prefab, JToken? itemValue = null)
         {
-
-            EditorItem bei = Create(Type.Prefabs[0], itemValue, new EventManager());
+            EditorItem bei = Create(prefab, itemValue, new EventManager());
 
             JArray value = (JArray)Value;
 
@@ -223,7 +304,6 @@ namespace Aadev.JTF.Editor.EditorItems
             bei.ArrayIndex = index;
             if (itemValue is null)
                 value.Add(bei.Value);
-
 
 
             Controls.Add(bei);
@@ -276,15 +356,20 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+
+            int w = Width - 20;
+
             foreach (Control item in Controls)
             {
-                item.Width = Width - 20;
+                if (item.Width != w)
+                    item.Width = w;
             }
 
         }
         private void CreateObjectItem(JProperty? item = null)
         {
-            EditorItem bei = Create(Type.Prefabs[0], null, new EventManager());
+            JtToken? type = Type.Prefabs[0];
+            EditorItem bei = Create(type, null, new EventManager());
 
 
             bei.Location = new Point(10, y);

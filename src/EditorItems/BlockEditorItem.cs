@@ -1,5 +1,6 @@
 ﻿using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
@@ -36,8 +37,12 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal BlockEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal override bool IsSaveable => Type.Required || Value.Type != JTokenType.Null && RawValue.Count > 0;
 
+        internal BlockEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
+        {
+            SetStyle(ControlStyles.ContainerControl, true);
+        }
 
         protected override void OnExpandChanged()
         {
@@ -99,7 +104,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             base.OnExpandChanged();
         }
-        protected override void CreateValue() => Value = new JObject();
+        protected override JToken CreateValue() => Value = new JObject();
 
         private int BeiResize(EditorItem bei)
         {
@@ -137,6 +142,12 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.Location = new System.Drawing.Point(10, y);
             bei.Width = Width - 20;
+
+            if (bei.IsSaveable)
+            {
+                RawValue[type.Name!] = bei.Value;
+            }
+
             bei.CreateEventHandlers();
             Controls.Add(bei);
             if (resizeOnCreate)
@@ -152,19 +163,13 @@ namespace Aadev.JTF.Editor.EditorItems
             };
             bei.ValueChanged += (sender, e) =>
             {
-
-
-                if (bei.Value.Type is JTokenType.Null)
-                {
-
-                    RawValue.Remove(bei.Type.Name!);
-                }
-
-                else
+                if (bei.IsSaveable)
                 {
                     RawValue[bei.Type.Name!] = bei.Value;
-
-
+                }
+                else
+                {
+                    RawValue.Remove(bei.Type.Name!);
                 }
 
                 OnValueChanged();
@@ -172,12 +177,9 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.TwinTypeChanged += (sender, e) =>
             {
-
                 Controls.Remove(bei);
 
                 CreateBei(e.NewTwinType!, bei.Top, true);
-
-
             };
             if (bei.Height != 0)
             {
@@ -193,6 +195,19 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 item.CreateEventHandlers();
             }
+        }
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+
+            int w = Width - 20;
+
+            foreach (Control item in Controls)
+            {
+                if (item.Width != w)
+                    item.Width = w;
+            }
+
         }
     }
 }
