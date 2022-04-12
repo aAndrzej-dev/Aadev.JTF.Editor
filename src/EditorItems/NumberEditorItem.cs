@@ -10,23 +10,23 @@ namespace Aadev.JTF.Editor.EditorItems
     internal sealed class NumberEditorItem : EditorItem
     {
         private TextBox? textBox;
-        private JToken _value = JValue.CreateNull();
+        private JValue _value = JValue.CreateNull();
         private Rectangle textBoxBounds = Rectangle.Empty;
 
         protected override bool IsFocused => Focused || textBox?.Focused is true;
 
 
-        private int? RawValue
+        private JValue? RawValue
         {
-            get => _value?.Type == Type.JsonType ? ((int?)_value ?? 0) : (_value?.Type is JTokenType.Null ? 0 : null);
-            set => _value = new JValue(value);
+            get => _value.Type == Type.JsonType ? _value : (_value.Type is JTokenType.Null ? new JValue(0) : null);
+            set => _value = value ?? JValue.CreateNull();
         }
         public override JToken Value
         {
             get => _value;
             set
             {
-                _value = value;
+                _value = (JValue)value;
                 Invalidate();
                 OnValueChanged();
             }
@@ -41,18 +41,18 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (Value.Type == JTokenType.Null)
                     return false;
 
-                if (Type.Type == JtTokenType.Byte)
-                    return ((JtByte)Type).Default != (byte?)Value;
-                else if (Type.Type == JtTokenType.Short)
-                    return ((JtShort)Type).Default != (short?)Value;
-                else if (Type.Type == JtTokenType.Int)
-                    return ((JtInt)Type).Default != (int?)Value;
-                else if (Type.Type == JtTokenType.Long)
-                    return ((JtLong)Type).Default != (long?)Value;
-                else if (Type.Type == JtTokenType.Float)
-                    return ((JtDouble)Type).Default != (float?)Value;
-                else if (Type.Type == JtTokenType.Double)
-                    return ((JtFloat)Type).Default != (double?)Value;
+                if (Type is JtByte jtByte)
+                    return jtByte.Default != (byte?)RawValue;
+                if (Type is JtShort jtShort)
+                    return jtShort.Default != (short?)RawValue;
+                if (Type is JtInt jtInt)
+                    return jtInt.Default != (int?)RawValue;
+                if (Type is JtLong jtLong)
+                    return jtLong.Default != (long?)RawValue;
+                if (Type is JtFloat jtFloat)
+                    return jtFloat.Default != (float?)RawValue;
+                if (Type is JtDouble jtDouble)
+                    return jtDouble.Default != (double?)RawValue;
 
                 throw new Exception();
             }
@@ -69,16 +69,27 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 return;
             }
+            bool createTextBox = false;
+            if (Focused && textBoxBounds == Rectangle.Empty)
+            {
+                createTextBox = true;
+            }
+
+
             textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
             e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), textBoxBounds);
 
             if (textBox == null)
             {
 
-                SizeF sf = e.Graphics.MeasureString(RawValue.ToString(), Font);
+                SizeF sf = e.Graphics.MeasureString(RawValue!.ToString(), Font);
 
                 e.Graphics.DrawString(RawValue.ToString(), Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
 
+            }
+            if (createTextBox)
+            {
+                CreateTextBox();
             }
         }
         protected override void OnMouseMove(MouseEventArgs e)
@@ -114,9 +125,9 @@ namespace Aadev.JTF.Editor.EditorItems
             else if (Type.Type == JtTokenType.Long)
                 return Value = ((JtLong)Type).Default;
             else if (Type.Type == JtTokenType.Float)
-                return Value = ((JtDouble)Type).Default;
-            else if (Type.Type == JtTokenType.Double)
                 return Value = ((JtFloat)Type).Default;
+            else if (Type.Type == JtTokenType.Double)
+                return Value = ((JtDouble)Type).Default;
 
             throw new Exception("Current element hasn't got numeric value");
         }
@@ -127,13 +138,13 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 return;
             }
-
+            if (textBoxBounds == Rectangle.Empty)
+                return;
             if (textBox is not null)
             {
                 return;
             }
 
-            Type t = Type.GetType();
 
             textBox = new TextBox
             {
@@ -145,18 +156,13 @@ namespace Aadev.JTF.Editor.EditorItems
             };
 
 
-            textBox.Location = new System.Drawing.Point(xOffset + 10, 16 - textBox.Height / 2 + 2);
+            textBox.Location = new Point(xOffset + 10, 16 - textBox.Height / 2 + 2);
             textBox.Width = Width - xOffset - 20 - xRightOffset;
             textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            textBox.Text = RawValue.ToString();
+            textBox.Text = RawValue!.ToString();
 
-            textBox.KeyPress += (s, e) => e.Handled = !char.IsDigit(e.KeyChar) && e.KeyChar != '-' && !char.IsControl(e.KeyChar) && (e.KeyChar != '.' || (Type.Type != JtTokenType.Float && Type.Type != JtTokenType.Double));
+            textBox.KeyPress += (s, e) => e.Handled = !char.IsDigit(e.KeyChar) && e.KeyChar != '-' && !char.IsControl(e.KeyChar) && (e.KeyChar != ',' || (Type.Type != JtTokenType.Float && Type.Type != JtTokenType.Double));
 
-            textBox.TextChanged += (sender, eventArgs) =>
-            {
-
-
-            };
             Controls.Add(textBox);
 
             textBox.Focus();
@@ -213,13 +219,13 @@ namespace Aadev.JTF.Editor.EditorItems
                 {
 
                     if (float.TryParse(textBox.Text, out float b))
-                        Value = MathF.Min(jtFloat.Max, MathF.Min(jtFloat.Min, b));
+                        Value = MathF.Min(jtFloat.Max, MathF.Max(jtFloat.Min, b));
                     else textBox.Undo();
                 }
-                else if (Type is JtLong jtDouble)
+                else if (Type is JtDouble jtDouble)
                 {
                     if (double.TryParse(textBox.Text, out double b))
-                        Value = Math.Min(jtDouble.Max, Math.Min(jtDouble.Min, b));
+                        Value = Math.Min(jtDouble.Max, Math.Max(jtDouble.Min, b));
                     else textBox.Undo();
                 }
 
@@ -228,6 +234,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 textBox = null;
                 Invalidate();
             };
+
         }
     }
 }

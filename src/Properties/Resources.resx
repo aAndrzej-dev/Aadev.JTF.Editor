@@ -121,6 +121,15 @@
   <data name="array" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\List.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="ArrayElementsCount" xml:space="preserve">
+    <value>{0} elements</value>
+  </data>
+  <data name="ArrayInvalidElementsCount" xml:space="preserve">
+    <value>{0} elements ({1} reguired)</value>
+  </data>
+  <data name="ArrayObjectNameExist" xml:space="preserve">
+    <value>This name allreaby exist: {0}</value>
+  </data>
   <data name="block" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Block.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -129,6 +138,12 @@
   </data>
   <data name="byte" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Byte.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DiscardInvalidType" xml:space="preserve">
+    <value>Discard Invalid Type</value>
+  </data>
+  <data name="DiscardInvalidValue" xml:space="preserve">
+    <value>Discard Invalid Value</value>
   </data>
   <data name="double" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Double.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -141,6 +156,12 @@
   </data>
   <data name="int" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Int.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="InvalidValue" xml:space="preserve">
+    <value>Invalid value: '{0}'</value>
+  </data>
+  <data name="InvalidValueType" xml:space="preserve">
+    <value>Invalid value type: {0}, required: {1}</value>
   </data>
   <data name="long" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Long.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

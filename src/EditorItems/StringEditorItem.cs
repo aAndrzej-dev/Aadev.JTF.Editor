@@ -10,7 +10,7 @@ namespace Aadev.JTF.Editor.EditorItems
     {
         private TextBox? textBox;
         private JToken _value = JValue.CreateNull();
-        private Rectangle textboxBounds = Rectangle.Empty;
+        private Rectangle textBoxBounds = Rectangle.Empty;
 
         protected override bool IsFocused => Focused || textBox?.Focused is true;
 
@@ -19,7 +19,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private string? RawValue
         {
-            get => _value?.Type == Type.JsonType ? ((string?)_value ?? Type.Default) : (_value?.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
+            get => _value.Type == Type.JsonType ? ((string?)_value ?? Type.Default) : (_value.Type is JTokenType.Null ? Type.Default : null);
+            set => _value = new JValue(value);
         }
         public override JToken Value
         {
@@ -45,11 +46,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (IsInvalidValueType)
                 return;
+            bool createTextBox = false;
+            if (Focused && textBoxBounds == Rectangle.Empty)
+            {
+                createTextBox = true;
+            }
 
 
-
-            textboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
-            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), textboxBounds);
+            textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
+            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), textBoxBounds);
 
             if (textBox is null)
             {
@@ -58,14 +63,17 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 e.Graphics.DrawString(RawValue, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
-
+            if (createTextBox)
+            {
+                CreateTextBox();
+            }
 
         }
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
 
-            if (textboxBounds.Contains(e.Location))
+            if (textBoxBounds.Contains(e.Location))
             {
                 CreateTextBox();
                 Invalidate();
@@ -79,7 +87,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseMove(MouseEventArgs e)
         {
 
-            if (textboxBounds.Contains(e.Location))
+            if (textBoxBounds.Contains(e.Location))
             {
                 Cursor = Cursors.IBeam;
                 return;
@@ -90,6 +98,8 @@ namespace Aadev.JTF.Editor.EditorItems
         private void CreateTextBox()
         {
             if (IsInvalidValueType)
+                return;
+            if (textBoxBounds == Rectangle.Empty)
                 return;
             if (textBox is not null)
             {
@@ -109,8 +119,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-            textBox.Location = new Point(textboxBounds.X + 10, 16 - textBox.Height / 2 + 2);
-            textBox.Width = Width - textboxBounds.X - 20 - xRightOffset;
+            textBox.Location = new Point(textBoxBounds.X + 10, 16 - textBox.Height / 2 + 2);
+            textBox.Width = Width - textBoxBounds.X - 20 - xRightOffset;
             textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             textBox.TextChanged += (sender, eventArgs) => Value = textBox.Text;

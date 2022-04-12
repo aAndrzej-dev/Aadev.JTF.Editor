@@ -161,12 +161,75 @@ namespace Aadev.JTF.Editor.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0} elements.
+        /// </summary>
+        internal static string ArrayElementsCount {
+            get {
+                return ResourceManager.GetString("ArrayElementsCount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} elements ({1} reguired).
+        /// </summary>
+        internal static string ArrayInvalidElementsCount {
+            get {
+                return ResourceManager.GetString("ArrayInvalidElementsCount", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This name allreaby exist: {0}.
+        /// </summary>
+        internal static string ArrayObjectNameExist {
+            get {
+                return ResourceManager.GetString("ArrayObjectNameExist", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap block {
             get {
                 object obj = ResourceManager.GetObject("block", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Discard Invalid Type.
+        /// </summary>
+        internal static string DiscardInvalidType {
+            get {
+                return ResourceManager.GetString("DiscardInvalidType", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Discard Invalid Value.
+        /// </summary>
+        internal static string DiscardInvalidValue {
+            get {
+                return ResourceManager.GetString("DiscardInvalidValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid value: &apos;{0}&apos;.
+        /// </summary>
+        internal static string InvalidValue {
+            get {
+                return ResourceManager.GetString("InvalidValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Invalid value type: {0}, required: {1}.
+        /// </summary>
+        internal static string InvalidValueType {
+            get {
+                return ResourceManager.GetString("InvalidValueType", resourceCulture);
             }
         }
         

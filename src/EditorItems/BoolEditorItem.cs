@@ -70,11 +70,13 @@ namespace Aadev.JTF.Editor.EditorItems
             if (falsePanelRect.Contains(e.Location))
             {
                 Value = false;
+                Focus();
                 return;
             }
             if (truePanelRect.Contains(e.Location))
             {
                 Value = true;
+                Focus();
                 return;
             }
 
@@ -89,10 +91,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (e.KeyCode == Keys.Space)
             {
-                if ((bool?)Value is true)
-                    Value = false;
-                else
-                    Value = true;
+                Value = (bool?)Value is false;
             }
         }
         protected override JToken CreateValue() => Value = Type.Default;

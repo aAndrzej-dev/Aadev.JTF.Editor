@@ -24,7 +24,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 return (JObject)_value;
             }
 
-            set => _value = value is not null ? value : _value;
+            set => _value = value is null ? _value : value;
         }
         public override JToken Value
         {
@@ -37,7 +37,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal override bool IsSaveable => Type.Required || Value.Type != JTokenType.Null && RawValue.Count > 0;
+        internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && RawValue.Count > 0);
 
         internal BlockEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
@@ -77,22 +77,17 @@ namespace Aadev.JTF.Editor.EditorItems
 
                     if (t is null)
                     {
-                        y = CreateBei(item, y);
+                        (y, _) = CreateEditorItem(item, y);
                         Twins.Add(item.Name!);
 
                         continue;
                     }
-                    y = CreateBei(t, y);
+                    (y, _) = CreateEditorItem(t, y);
                     Twins.Add(item.Name!);
                     continue;
-
-
-
-
-
                 }
 
-                y = CreateBei(item, y);
+                (y, _) = CreateEditorItem(item, y);
 
 
             }
@@ -106,7 +101,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         protected override JToken CreateValue() => Value = new JObject();
 
-        private int BeiResize(EditorItem bei)
+        private int UpdateLayout(EditorItem bei)
         {
             int oy = bei.Top + bei.Height + 5;
             if (bei.Height == 0)
@@ -126,7 +121,7 @@ namespace Aadev.JTF.Editor.EditorItems
             y = oy + 10;
             return y;
         }
-        private int CreateBei(JtToken type, int y, bool resizeOnCreate = false)
+        private (int, EditorItem) CreateEditorItem(JtToken type, int y, bool resizeOnCreate = false)
         {
             EditorItem bei;
             if (resizeOnCreate)
@@ -152,12 +147,12 @@ namespace Aadev.JTF.Editor.EditorItems
             Controls.Add(bei);
             if (resizeOnCreate)
             {
-                y = BeiResize(bei);
+                y = UpdateLayout(bei);
                 Height = y;
             }
             bei.HeightChanged += (sender, e) =>
             {
-                y = BeiResize(bei);
+                y = UpdateLayout(bei);
                 Height = y;
 
             };
@@ -179,14 +174,17 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 Controls.Remove(bei);
 
-                CreateBei(e.NewTwinType!, bei.Top, true);
+
+                CreateEditorItem(e.NewTwinType!, bei.Top, true);
+
+
             };
             if (bei.Height != 0)
             {
                 y += bei.Height + 5;
             }
 
-            return y;
+            return (y, bei);
         }
         internal override void CreateEventHandlers()
         {

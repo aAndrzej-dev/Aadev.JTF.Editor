@@ -1,12 +1,11 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor.EditorItems
 {
-    internal abstract partial class EditorItem : UserControl, IHaveEventManager
+    internal abstract partial class EditorItem : UserControl
     {
         protected static Pen WhitePen = new Pen(Color.White);
         protected virtual bool IsFocused => Focused;
@@ -35,14 +34,14 @@ namespace Aadev.JTF.Editor.EditorItems
 
         public event EventHandler? ValueChanged;
         public event EventHandler? DynamicNameChanged;
-        public event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
-        public event EventHandler? HeightChanged;
+        internal event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
+        internal event EventHandler? HeightChanged;
 
 
         internal int ArrayIndex { get; set; } = -1;
         public abstract JToken Value { get; set; }
         public JtToken Type { get; }
-        public EventManager EventManager { get; private set; }
+        protected EventManager EventManager { get; }
 
         internal abstract bool IsSaveable { get; }
 
@@ -113,7 +112,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (IsFocused)
             {
-                ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid, Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid, Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid, Color.FromArgb(200, 200, 200), 2, ButtonBorderStyle.Solid);
+                ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), Color.Aqua, 2, ButtonBorderStyle.Solid, Color.Aqua, 2, ButtonBorderStyle.Solid, Color.Aqua, 2, ButtonBorderStyle.Solid, Color.Aqua, 2, ButtonBorderStyle.Solid);
                 xOffset = 2;
                 xRightOffset = 2;
 
@@ -256,7 +255,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (IsInvalidValueType)
             {
 
-                string message = $"Invalid value type: {Value.Type}, required: {Type.JsonType}";
+                string message = string.Format(Properties.Resources.InvalidValueType, Value.Type, Type.JsonType);
 
                 SizeF sf = g.MeasureString(message, Font);
                 g.DrawString(message, Font, new SolidBrush(Color.Red), new PointF(xOffset + 10, 16 - sf.Height / 2));
@@ -264,7 +263,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 xOffset += (int)sf.Width + 10;
 
 
-                string discardMessage = "Discard Invalid Type";
+                string discardMessage = Properties.Resources.DiscardInvalidType;
 
                 SizeF dsf = g.MeasureString(discardMessage, Font);
 
@@ -279,8 +278,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
             }
-
-
         }
 
 
@@ -399,6 +396,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         }
 
+
         private void CreateTextBox()
         {
             if (tbDynamicName is not null)
@@ -439,10 +437,6 @@ namespace Aadev.JTF.Editor.EditorItems
             tbDynamicName?.Focus();
             tbDynamicName?.SelectAll();
         }
-        public class TwinChangedEventArgs : EventArgs
-        {
-            public JtToken? NewTwinType { get; set; }
-        }
         protected override void OnKeyDown(KeyEventArgs e)
         {
             base.OnKeyDown(e);
@@ -457,28 +451,28 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         protected static string ConvertToFriendlyName(string name)
         {
-            if (name.Length == 0)
-                return string.Empty;
 
-            StringBuilder sb = new StringBuilder();
 
-            sb.Append(char.ToUpper(name[0]));
-            for (int i = 1; i < name.Length; i++)
+            return string.Create(name.Length, name, new System.Buffers.SpanAction<char, string>((span, n) =>
             {
-                if (name[i] == '_')
+                span[0] = char.ToUpper(n[0]);
+                for (int i = 1; i < name.Length; i++)
                 {
-                    sb.Append(' ');
-                    if (name.Length <= i + 1)
+                    if (name[i] == '_')
                     {
+                        span[i] = ' ';
+                        if (name.Length <= i + 1)
+                        {
+                            continue;
+                        }
+                        i++;
+                        span[i] = char.ToUpper(name[i]);
                         continue;
                     }
-                    i++;
-                    sb.Append(char.ToUpper(name[i]));
-                    continue;
+                    span[i] = name[i];
                 }
-                sb.Append(name[i]);
-            }
-            return sb.ToString();
+
+            }));
         }
     }
 }

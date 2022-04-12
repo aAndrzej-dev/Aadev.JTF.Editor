@@ -7,7 +7,7 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal sealed class EnumEditorItem : EditorItem
     {
-        private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Type.Values.Contains(RawValue);
+        private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Type.Values.Contains(RawValue) && !Type.CanUseCustomValue;
         private JToken _value = JValue.CreateNull();
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
         private Rectangle comboBoxBounds = Rectangle.Empty;
@@ -17,7 +17,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private string? RawValue
         {
-            get => _value?.Type == Type.JsonType ? (Type.Values.Contains((string?)_value) ? ((string?)_value ?? Type.Default) : null) : (_value?.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
+            get => _value.Type == Type.JsonType ? (Type.Values.Contains((string?)_value) || Type.CanUseCustomValue ? ((string?)_value ?? Type.Default) : null) : (_value.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
         }
         public override JToken Value
         {
@@ -48,7 +48,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (InvalidValue)
             {
-                string message = $"Invalid value: '{_value}'";
+                string message = string.Format(Properties.Resources.InvalidValue, _value.ToString());
 
                 SizeF sf = e.Graphics.MeasureString(message, Font);
                 e.Graphics.DrawString(message, Font, new SolidBrush(Color.Red), new PointF(xOffset + 10, 16 - sf.Height / 2));
@@ -57,7 +57,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-                string discardMessage = "Discard Invalid Value";
+                string discardMessage = Properties.Resources.DiscardInvalidValue;
+
 
                 SizeF dsf = e.Graphics.MeasureString(discardMessage, Font);
 
@@ -73,6 +74,12 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             }
 
+            bool createComboBox = false;
+            if (Focused && comboBoxBounds == Rectangle.Empty)
+            {
+                createComboBox = true;
+            }
+
             comboBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
             e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), comboBoxBounds);
 
@@ -83,6 +90,10 @@ namespace Aadev.JTF.Editor.EditorItems
                 SizeF sf = e.Graphics.MeasureString(RawValue, Font);
 
                 e.Graphics.DrawString(RawValue, Font, new SolidBrush(ForeColor), new PointF(xOffset + 12, 16 - sf.Height / 2));
+            }
+            if (createComboBox)
+            {
+                CreateComboBox();
             }
         }
 
@@ -96,10 +107,10 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             if (IsInvalidValueType || InvalidValue)
                 return;
-            if (comboBox != null)
-            {
+            if (comboBoxBounds == Rectangle.Empty)
                 return;
-            }
+            if (comboBox is not null)
+                return;
 
             comboBox = new ComboBox
             {
@@ -137,12 +148,13 @@ namespace Aadev.JTF.Editor.EditorItems
                 comboBox.DropDownStyle = ComboBoxStyle.DropDown;
             }
 
-            comboBox.SelectedItem = RawValue;
+            comboBox.Text = RawValue;
 
-            comboBox.SelectedIndexChanged += (sender, eventArgs) => Value = comboBox?.SelectedItem?.ToString();
+            comboBox.SelectedIndexChanged += (sender, eventArgs) => Value = comboBox?.Text;
 
             comboBox.LostFocus += (s, e) =>
             {
+                Value = comboBox?.Text;
                 Controls.Remove(comboBox);
                 comboBox = null;
                 Invalidate();

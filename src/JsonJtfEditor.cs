@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor
 {
-    public partial class JsonJtfEditor : UserControl, IHaveEventManager
+    public partial class JsonJtfEditor : UserControl
     {
         private JTemplate? template;
         private int y;
@@ -26,7 +26,6 @@ namespace Aadev.JTF.Editor
         public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
         public string? Filename { get => filename; set { filename = value; OnTemplateChanged(); } }
 
-        EventManager IHaveEventManager.EventManager => eventManager;
 
         public JsonJtfEditor()
         {
@@ -76,7 +75,7 @@ namespace Aadev.JTF.Editor
                     Twins.Add(item.Name!);
                 }
 
-                y = CreateBei(item, y);
+                y = CreateEditorItem(item, y);
 
 
             }
@@ -86,7 +85,7 @@ namespace Aadev.JTF.Editor
 
         public void Save() => File.WriteAllText(Filename!, Root!.ToString(Newtonsoft.Json.Formatting.None));
 
-        private int BeiResize(EditorItem bei)
+        private int UpdateLayout(EditorItem bei)
         {
             int oy = bei.Top + bei.Height + 5;
             if (bei.Height == 0)
@@ -107,7 +106,7 @@ namespace Aadev.JTF.Editor
             return y;
         }
 
-        private int CreateBei(JtToken type, int y, bool resizeOnCreate = false)
+        private int CreateEditorItem(JtToken type, int y, bool resizeOnCreate = false)
         {
             EditorItem bei;
             if (resizeOnCreate)
@@ -127,12 +126,12 @@ namespace Aadev.JTF.Editor
             Controls.Add(bei);
             if (resizeOnCreate)
             {
-                y = BeiResize(bei);
+                y = UpdateLayout(bei);
                 Height = y;
             }
             bei.HeightChanged += (sender, e) =>
             {
-                y = BeiResize(bei);
+                y = UpdateLayout(bei);
                 Height = y;
 
             };
@@ -158,7 +157,7 @@ namespace Aadev.JTF.Editor
             {
                 Controls.Remove(bei);
 
-                CreateBei(e.NewTwinType!, bei.Top, true);
+                CreateEditorItem(e.NewTwinType!, bei.Top, true);
             };
             if (bei.Height != 0)
             {
