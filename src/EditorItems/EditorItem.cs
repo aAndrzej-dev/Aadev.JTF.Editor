@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Aadev.JTF.Types;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -9,27 +10,32 @@ namespace Aadev.JTF.Editor.EditorItems
     {
         protected static Pen WhitePen = new Pen(Color.White);
         protected virtual bool IsFocused => Focused;
-
         protected bool IsInvalidValueType => Value.Type is not JTokenType.Null && (Value.Type != Type.JsonType);
+
 
         private string? dynamicName;
         private int oldHeight;
         private bool expanded;
+        private readonly JtToken[] twinsFamily;
+        private TextBox? tbDynamicName;
+        private Rectangle expandButtonBounds = Rectangle.Empty;
+        private Rectangle removeButtonBounds = Rectangle.Empty;
+        private Rectangle discardInvalidTypeButtonBounds = Rectangle.Empty;
+        private Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
+        private Rectangle nameLabelBounds = Rectangle.Empty;
+        private Rectangle conditionsLabelBounds = Rectangle.Empty;
+        private Rectangle twinFamilyButtonBounds;
+        private bool hasInvalidConditions;
 
 
         protected bool AreEventHandlersCreated { get; private set; }
-        protected readonly JtToken[] twinsFamily;
+
         protected int xOffset = 0;
         protected int xRightOffset = 0;
         protected int yOffset = 0;
         protected int innerHeight = 0;
-        protected TextBox? tbDynamicName;
-        protected Rectangle expandButtonBounds = Rectangle.Empty;
-        protected Rectangle removeButtonBounds = Rectangle.Empty;
-        protected Rectangle discardInvalidTypeButtonBounds = Rectangle.Empty;
-        protected Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
-        protected Rectangle twinFamilyButtonBounds = Rectangle.Empty;
-        protected Rectangle nameLabelBounds = Rectangle.Empty;
+
+
 
 
         public event EventHandler? ValueChanged;
@@ -42,12 +48,12 @@ namespace Aadev.JTF.Editor.EditorItems
         public abstract JToken Value { get; set; }
         public JtToken Type { get; }
         protected EventManager EventManager { get; }
-
+        protected bool CanCollapse => Type is JtArray or JtBlock && Parent is not JsonJtfEditor;
         internal abstract bool IsSaveable { get; }
 
 
         public string? DynamicName { get => dynamicName; set { dynamicName = value; Invalidate(); } }
-        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = value; OnExpandChanged(); } }
+        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; OnExpandChanged(); } }
 
         protected abstract JToken CreateValue();
         protected void OnValueChanged() => ValueChanged?.Invoke(this, EventArgs.Empty);
@@ -74,26 +80,13 @@ namespace Aadev.JTF.Editor.EditorItems
 
             AutoScaleMode = AutoScaleMode.None;
 
-            twinFamilyButtonBounds = new Rectangle(0, 1, twinsFamily.Length * 30, 30);
+            twinFamilyButtonBounds = new Rectangle(1, 1, twinsFamily.Length * 30, 30);
 
 
             EventManager.RegistryEvent(Type.Id, Value);
 
             ValueChanged += (s, ev) => EventManager.GetEvent(Type.Id)?.Invoke(Value);
         }
-
-        public static EditorItem Create(JtToken type, JToken? token, EventManager eventManager)
-        {
-            if (type.Type == JtTokenType.Bool) return new BoolEditorItem(type, token, eventManager);
-            if (type.Type == JtTokenType.String) return new StringEditorItem(type, token, eventManager);
-            if (type.Type.IsNumericType) return new NumberEditorItem(type, token, eventManager);
-            if (type.Type == JtTokenType.Enum) return new EnumEditorItem(type, token, eventManager);
-            if (type.Type == JtTokenType.Block) return new BlockEditorItem(type, token, eventManager);
-            if (type.Type == JtTokenType.Array) return new ArrayEditorItem(type, token, eventManager);
-
-            throw new ArgumentOutOfRangeException(nameof(type));
-        }
-
 
         protected override void OnGotFocus(EventArgs e)
         {
@@ -105,17 +98,66 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnLostFocus(e);
             Invalidate();
         }
+
+
         protected override void OnPaint(PaintEventArgs e)
         {
-
             Graphics g = e.Graphics;
 
+            if (Parent is JsonJtfEditor)
+            {
+                Expanded = true;
+                if (Type is JtBlock && !IsInvalidValueType)
+                {
+                    xOffset = 0;
+                    xRightOffset = 0;
+                    yOffset = 0;
+                    innerHeight = 32;
+                    return;
+                }
+
+
+            }
+
+
+            InitDraw(g);
+
+
+
+            DrawTypeIcons(g);
+            DrawExpandButton(g);
+            DrawName(g);
+            DrawRemoveButton(g);
+            DrawConditionsLable(g);
+            DrawDynamicName(e);
+            DrawInvalidValueMessage(g);
+        }
+
+        private void DrawConditionsLable(Graphics g)
+        {
+            if (Type.Conditions.Count > 0)
+            {
+
+                string msg = string.Format("{0} conditions", Type.Conditions.Count.ToString());
+
+
+                SizeF msgSize = g.MeasureString(msg, Font);
+
+
+                g.DrawString(msg, Font, new SolidBrush(hasInvalidConditions ? Color.Red : ForeColor), new PointF((Width - xRightOffset - 10 - msgSize.Width), (16 - msgSize.Height / 2)));
+
+
+                conditionsLabelBounds = new Rectangle((int)(Width - xRightOffset - 10 - msgSize.Width), (int)(16 - msgSize.Height / 2), (int)msgSize.Width, (int)msgSize.Height);
+                xRightOffset += (int)msgSize.Width + 20;
+            }
+        }
+        private void InitDraw(Graphics g)
+        {
             if (IsFocused)
             {
                 ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), Color.Aqua, 2, ButtonBorderStyle.Solid, Color.Aqua, 2, ButtonBorderStyle.Solid, Color.Aqua, 2, ButtonBorderStyle.Solid, Color.Aqua, 2, ButtonBorderStyle.Solid);
                 xOffset = 2;
                 xRightOffset = 2;
-
                 yOffset = 2;
                 innerHeight = 28;
             }
@@ -128,53 +170,81 @@ namespace Aadev.JTF.Editor.EditorItems
                 yOffset = 1;
                 innerHeight = 30;
             }
+        }
+        private void DrawInvalidValueMessage(Graphics g)
+        {
+            if (!IsInvalidValueType)
+                return;
 
 
+            string message = string.Format(Properties.Resources.InvalidValueType, Value.Type, Type.JsonType);
 
-            foreach (JtToken item in twinsFamily)
+            SizeF sf = g.MeasureString(message, Font);
+            g.DrawString(message, Font, new SolidBrush(Color.Red), new PointF(xOffset + 10, 16 - sf.Height / 2));
+
+            xOffset += (int)sf.Width + 10;
+
+            string discardMessage = Properties.Resources.DiscardInvalidType;
+
+            SizeF dsf = g.MeasureString(discardMessage, Font);
+
+            discardInvalidTypeButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
+            g.FillRectangle(new SolidBrush(Color.Red), discardInvalidTypeButtonBounds);
+            g.DrawString(discardMessage, Font, new SolidBrush(Color.White), xOffset + 5, 16 - dsf.Height / 2);
+
+            xOffset += (int)sf.Width + 20;
+        }
+        private void DrawDynamicName(PaintEventArgs e)
+        {
+            if (!Type.IsDynamicName)
+                return;
+
+
+            if (Type.Type.IsContainerType)
             {
-                if (Type.IsArrayPrefab && Type != item)
-                {
-                    continue;
-                }
+                dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
+                e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
 
-                Bitmap? bmp = Properties.Resources.ResourceManager.GetObject(item.Type.Name) as Bitmap;
-                if (bmp is not null)
-                {
-                    if (Type == item)
-                    {
-                        g.FillRectangle(new SolidBrush(Color.RoyalBlue), xOffset, yOffset, 30, innerHeight);
-                    }
+                if (tbDynamicName is not null)
+                    return;
 
-                    g.DrawImage(bmp, xOffset + 8, 8, 16, 16);
 
-                    xOffset += 30;
-                }
+                SizeF sf = e.Graphics.MeasureString(DynamicName, Font);
+
+                e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
-
-            if (Type.Type.IsContainerType && !IsInvalidValueType)
+            else
             {
-                expandButtonBounds = new Rectangle(xOffset, yOffset, 30, innerHeight);
+                int size = (Width - xOffset) / 2;
 
-                g.FillRectangle(new SolidBrush(Color.Green), expandButtonBounds);
-
-
-
-                g.DrawRectangle(WhitePen, xOffset + 7, 8, 16, 16);
-                if (Expanded)
+                dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, size, innerHeight);
+                e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
+                if (tbDynamicName is null)
                 {
-                    g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
+
+                    SizeF sf = e.Graphics.MeasureString(DynamicName, Font);
+
+                    e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
                 }
-                else
-                {
-                    g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
-                    g.DrawLine(WhitePen, xOffset + 15, 12, xOffset + 15, 20);
-                }
-                xOffset += 30;
+                xOffset += size;
             }
+        }
+        private void DrawRemoveButton(Graphics g)
+        {
+            if (!Type.IsArrayPrefab)
+                return;
 
+            removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
+            g.FillRectangle(new SolidBrush(Color.Red), removeButtonBounds);
 
-            if (!string.IsNullOrWhiteSpace(Type.DisplayName))
+            g.DrawLine(WhitePen, Width - 20, 12, Width - 12, 20);
+            g.DrawLine(WhitePen, Width - 12, 12, Width - 20, 20);
+
+            xRightOffset += 30;
+        }
+        private void DrawName(Graphics g)
+        {
+            if (!string.IsNullOrEmpty(Type.DisplayName))
             {
                 int x = xOffset;
                 xOffset += 20;
@@ -184,14 +254,13 @@ namespace Aadev.JTF.Editor.EditorItems
                 SizeF nameSize = g.MeasureString(dn, Font);
 
 
-                g.DrawString(dn, Font, new SolidBrush(ForeColor), new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
+                g.DrawString(dn, Font, new SolidBrush(ForeColor), new PointF(xOffset, 16 - nameSize.Height / 2));
 
                 xOffset += (int)nameSize.Width;
 
                 xOffset += 20;
                 nameLabelBounds = new Rectangle(x, 1, xOffset - x, 30);
             }
-
             if (ArrayIndex != -1)
             {
                 xOffset += 10;
@@ -205,82 +274,52 @@ namespace Aadev.JTF.Editor.EditorItems
                 xOffset += (int)nameSize.Width;
                 xOffset += 10;
             }
+        }
+        private void DrawExpandButton(Graphics g)
+        {
+            if (!Type.Type.IsContainerType || IsInvalidValueType || !CanCollapse)
+                return;
+
+            expandButtonBounds = new Rectangle(xOffset, yOffset, 30, innerHeight);
+
+            g.FillRectangle(new SolidBrush(Color.Green), expandButtonBounds);
 
 
-            if (Type.IsArrayPrefab)
+
+            g.DrawRectangle(WhitePen, xOffset + 7, 8, 16, 16);
+            if (Expanded)
             {
-                removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
-                g.FillRectangle(new SolidBrush(Color.Red), removeButtonBounds);
-
-                g.DrawLine(WhitePen, Width - 20, 12, Width - 12, 20);
-                g.DrawLine(WhitePen, Width - 12, 12, Width - 20, 20);
-
-                xRightOffset += 30;
+                g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
             }
-            if (Type.IsDynamicName)
+            else
             {
-
-                if (Type.Type.IsContainerType)
+                g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
+                g.DrawLine(WhitePen, xOffset + 15, 12, xOffset + 15, 20);
+            }
+            xOffset += 30;
+        }
+        private void DrawTypeIcons(Graphics g)
+        {
+            foreach (JtToken item in twinsFamily)
+            {
+                if (Type.IsArrayPrefab && Type != item)
                 {
-                    dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
-                    e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
-
-                    if (tbDynamicName is null)
-                    {
-
-                        SizeF sf = e.Graphics.MeasureString(DynamicName, Font);
-
-                        e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
-                    }
-                }
-                else
-                {
-                    int size = (Width - xOffset) / 2;
-
-                    dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, size, innerHeight);
-                    e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
-                    if (tbDynamicName is null)
-                    {
-
-                        SizeF sf = e.Graphics.MeasureString(DynamicName, Font);
-
-                        e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
-                    }
-                    xOffset += size;
+                    continue;
                 }
 
+                if (Properties.Resources.ResourceManager.GetObject(item.Type.Name) is not Bitmap bmp)
+                    continue;
 
-            }
+                if (Type == item)
+                {
+                    g.FillRectangle(new SolidBrush(Color.RoyalBlue), xOffset, yOffset, 30, innerHeight);
+                }
 
-            if (IsInvalidValueType)
-            {
+                g.DrawImage(bmp, xOffset + 8, 8, 16, 16);
 
-                string message = string.Format(Properties.Resources.InvalidValueType, Value.Type, Type.JsonType);
-
-                SizeF sf = g.MeasureString(message, Font);
-                g.DrawString(message, Font, new SolidBrush(Color.Red), new PointF(xOffset + 10, 16 - sf.Height / 2));
-
-                xOffset += (int)sf.Width + 10;
-
-
-                string discardMessage = Properties.Resources.DiscardInvalidType;
-
-                SizeF dsf = g.MeasureString(discardMessage, Font);
-
-                discardInvalidTypeButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
-                g.FillRectangle(new SolidBrush(Color.Red), discardInvalidTypeButtonBounds);
-                g.DrawString(discardMessage, Font, new SolidBrush(Color.White), xOffset + 5, 16 - dsf.Height / 2);
-
-
-
-                xOffset += (int)sf.Width + 20;
-
-
-
+                xOffset += 30;
             }
         }
-
-
 
         internal virtual void CreateEventHandlers()
         {
@@ -297,7 +336,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 if (ce is null)
                 {
-                    throw new Exception($"Invalid event id: {Type.Conditions[0].VariableId}");
+                    hasInvalidConditions = true;
+                    Height = 32;
+                    return;
+                    //throw new Exception($"Invalid event id: {Type.Conditions[0].VariableId}");
                 }
 
                 Height = Type.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true ? 32 : 0;
@@ -313,6 +355,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
+
             if (expandButtonBounds.Contains(e.Location))
             {
                 Expanded = !Expanded;
@@ -321,12 +364,19 @@ namespace Aadev.JTF.Editor.EditorItems
             if (removeButtonBounds.Contains(e.Location))
             {
                 Parent.Controls.Remove(this);
+
+
                 return;
             }
             if (discardInvalidTypeButtonBounds.Contains(e.Location))
             {
                 CreateValue();
-                Invalidate();
+
+                if (!CanCollapse)
+                    OnExpandChanged();
+                else
+                    Invalidate();
+
                 return;
             }
             if (dynamicNameTextboxBounds.Contains(e.Location))
@@ -334,16 +384,22 @@ namespace Aadev.JTF.Editor.EditorItems
                 CreateTextBox();
                 return;
             }
-
-            if (twinsFamily is not null && new Rectangle(0, 1, twinsFamily.Length * 30, 30).Contains(e.Location))
+            if (conditionsLabelBounds.Contains(e.Location))
             {
-                if ((e.Location.X - 1) / 30 + 1 <= twinsFamily.Length)
-                {
-                    if (twinsFamily[(e.Location.X - 1) / 30] != Type)
-                    {
-                        TwinTypeChanged?.Invoke(this, new TwinChangedEventArgs() { NewTwinType = twinsFamily[(e.Location.X - 1) / 30] });
-                    }
-                }
+                new ConditionsViewForm(Type).ShowDialog();
+                return;
+            }
+
+            if (new Rectangle(0, 1, twinsFamily.Length * 30, 30).Contains(e.Location))
+            {
+
+
+                JtToken? newType = twinsFamily[(e.Location.X - 1) / 30];
+
+                if (newType == Type)
+                    return;
+                TwinTypeChanged?.Invoke(this, new TwinChangedEventArgs() { NewTwinType = newType });
+
                 return;
 
             }
@@ -354,11 +410,11 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnResize(e);
 
-            if (oldHeight != Height)
-            {
-                HeightChanged?.Invoke(this, EventArgs.Empty);
-                oldHeight = Height;
-            }
+            if (oldHeight == Height)
+                return;
+
+            HeightChanged?.Invoke(this, EventArgs.Empty);
+            oldHeight = Height;
 
         }
         protected override void OnMouseMove(MouseEventArgs e)
@@ -374,7 +430,10 @@ namespace Aadev.JTF.Editor.EditorItems
                     return;
                 JsonJtfEditor.toolTip.Active = true;
 
-                JsonJtfEditor.toolTip.Show($"{Type.Name}\n{Type.Description}", this);
+
+
+
+                JsonJtfEditor.toolTip.Show($"{Type.Name}\nId: {Type.Id}\n{Type.Description}", this);
                 return;
             }
             else
@@ -388,7 +447,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
 
-            Cursor = expandButtonBounds.Contains(e.Location) || removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location)
+            Cursor = expandButtonBounds.Contains(e.Location) || removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location) || conditionsLabelBounds.Contains(e.Location)
                 ? Cursors.Hand
                 : Cursors.Default;
             if (dynamicNameTextboxBounds.Contains(e.Location))
@@ -421,6 +480,7 @@ namespace Aadev.JTF.Editor.EditorItems
             tbDynamicName.Location = new Point(xOffset + 10, 16 - tbDynamicName.Height / 2 + 2);
             tbDynamicName.TextChanged += (sender, eventArgs) =>
             {
+
                 DynamicNameChanged?.Invoke(this, EventArgs.Empty);
                 DynamicName = tbDynamicName.Text ?? DynamicName;
 
@@ -449,16 +509,16 @@ namespace Aadev.JTF.Editor.EditorItems
                 Expanded = !Expanded;
             }
         }
+
+
         protected static string ConvertToFriendlyName(string name)
         {
-
-
             return string.Create(name.Length, name, new System.Buffers.SpanAction<char, string>((span, n) =>
             {
                 span[0] = char.ToUpper(n[0]);
                 for (int i = 1; i < name.Length; i++)
                 {
-                    if (name[i] == '_')
+                    if (name[i] is '_')
                     {
                         span[i] = ' ';
                         if (name.Length <= i + 1)
@@ -473,6 +533,17 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
 
             }));
+        }
+        public static EditorItem Create(JtToken type, JToken? token, EventManager eventManager)
+        {
+            if (type.Type == JtTokenType.Bool) return new BoolEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.String) return new StringEditorItem(type, token, eventManager);
+            if (type.Type.IsNumericType) return new NumberEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.Enum) return new EnumEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.Block) return new BlockEditorItem(type, token, eventManager);
+            if (type.Type == JtTokenType.Array) return new ArrayEditorItem(type, token, eventManager);
+
+            throw new ArgumentOutOfRangeException(nameof(type));
         }
     }
 }

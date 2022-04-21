@@ -112,7 +112,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (Value.Count() != Type.FixedSize)
                     msg = string.Format(Properties.Resources.ArrayInvalidElementsCount, Value.Count(), Type.FixedSize);
-                msg = string.Format(Properties.Resources.ArrayElementsCount, Value.Count().ToString());
+                else msg = string.Format(Properties.Resources.ArrayElementsCount, Value.Count().ToString());
             }
             else
             {
@@ -124,8 +124,6 @@ namespace Aadev.JTF.Editor.EditorItems
             g.DrawString(msg, Font, new SolidBrush(ForeColor), new PointF(Width - xRightOffset - 10 - msgSize.Width, 16 - msgSize.Height / 2));
 
             xRightOffset += (int)msgSize.Width;
-
-
         }
         protected override void OnExpandChanged()
         {
@@ -230,7 +228,7 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
 
-        protected override JToken CreateValue() => Value = Type.MakeAsObject ? new JObject() : new JArray();
+        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
 
         private void EnsureValue()
         {
@@ -309,8 +307,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
             Controls.Add(bei);
 
-            bei.HeightChanged += (sender, ev) =>
+            bei.HeightChanged += (sender, e) =>
             {
+                if (sender is not EditorItem bei) return;
+
                 int oy = bei.Top + bei.Height + 5;
                 foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
                 {
@@ -323,8 +323,10 @@ namespace Aadev.JTF.Editor.EditorItems
             };
 
 
-            bei.ValueChanged += (s, ev) =>
+            bei.ValueChanged += (sender, e) =>
             {
+                if (sender is not EditorItem bei) return;
+
                 int ind = bei.ArrayIndex;
 
                 if (Value is not JArray array) return;
@@ -378,6 +380,10 @@ namespace Aadev.JTF.Editor.EditorItems
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
             bei.CreateEventHandlers();
+
+
+
+
             string newDynamicName = string.Empty;
 
             if (item is null)
@@ -400,6 +406,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.HeightChanged += (sender, ev) =>
             {
+                if (sender is not EditorItem bei) return;
                 int oy = bei.Top + bei.Height + 5;
                 foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
                 {
@@ -417,25 +424,32 @@ namespace Aadev.JTF.Editor.EditorItems
                 bei.Value = item.Value;
             }
 
-            bei.ValueChanged += (s, ev) =>
+            bei.ValueChanged += (sender, e) =>
             {
                 if (Value is not JObject obj) return;
+                if (sender is not EditorItem bei) return;
 
 
+                KeyValuePair<string, EditorItem>? keyValuePair = objectsArray.FirstOrDefault(x => x.Value == bei);
 
-                KeyValuePair<string, EditorItem> keyValuePair = objectsArray.First(x => x.Value == bei);
+                if (keyValuePair is null)
+                {
+                    objectsArray.Add(bei.DynamicName!, bei);
+                    keyValuePair = objectsArray.FirstOrDefault(x => x.Value == bei);
+                }
 
-                if (bei.DynamicName != keyValuePair.Key)
+
+                if (bei.DynamicName != keyValuePair?.Key)
                 {
                     if (objectsArray.ContainsKey(bei.DynamicName!))
                     {
                         MessageBox.Show(string.Format(Properties.Resources.ArrayObjectNameExist, bei.DynamicName), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        bei.DynamicName = keyValuePair.Key;
+                        bei.DynamicName = keyValuePair?.Key;
                         return;
                     }
 
-                    objectsArray.Remove(keyValuePair.Key);
-                    obj.Remove(keyValuePair.Key);
+                    objectsArray.Remove(keyValuePair?.Key);
+                    obj.Remove(keyValuePair?.Key);
 
                     objectsArray.Add(bei.DynamicName!, bei);
                 }

@@ -41,20 +41,16 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (Value.Type == JTokenType.Null)
                     return false;
 
-                if (Type is JtByte jtByte)
-                    return jtByte.Default != (byte?)RawValue;
-                if (Type is JtShort jtShort)
-                    return jtShort.Default != (short?)RawValue;
-                if (Type is JtInt jtInt)
-                    return jtInt.Default != (int?)RawValue;
-                if (Type is JtLong jtLong)
-                    return jtLong.Default != (long?)RawValue;
-                if (Type is JtFloat jtFloat)
-                    return jtFloat.Default != (float?)RawValue;
-                if (Type is JtDouble jtDouble)
-                    return jtDouble.Default != (double?)RawValue;
-
-                throw new Exception();
+                return Type switch
+                {
+                    JtByte jtByte => jtByte.Default != (byte?)RawValue,
+                    JtShort jtShort => jtShort.Default != (short?)RawValue,
+                    JtInt jtInt => jtInt.Default != (int?)RawValue,
+                    JtLong jtLong => jtLong.Default != (long?)RawValue,
+                    JtFloat jtFloat => jtFloat.Default != (float?)RawValue,
+                    JtDouble jtDouble => jtDouble.Default != (double?)RawValue,
+                    _ => throw new Exception()
+                };
             }
         }
 
@@ -114,23 +110,7 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnGotFocus(e);
             CreateTextBox();
         }
-        protected override JToken CreateValue()
-        {
-            if (Type.Type == JtTokenType.Byte)
-                return Value = ((JtByte)Type).Default;
-            else if (Type.Type == JtTokenType.Short)
-                return Value = ((JtShort)Type).Default;
-            else if (Type.Type == JtTokenType.Int)
-                return Value = ((JtInt)Type).Default;
-            else if (Type.Type == JtTokenType.Long)
-                return Value = ((JtLong)Type).Default;
-            else if (Type.Type == JtTokenType.Float)
-                return Value = ((JtFloat)Type).Default;
-            else if (Type.Type == JtTokenType.Double)
-                return Value = ((JtDouble)Type).Default;
-
-            throw new Exception("Current element hasn't got numeric value");
-        }
+        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
 
         private void CreateTextBox()
         {

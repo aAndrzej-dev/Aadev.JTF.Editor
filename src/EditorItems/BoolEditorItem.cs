@@ -51,11 +51,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
             SizeF falseLabelSize = g.MeasureString("False", Font);
 
-            g.DrawString("False", Font, new SolidBrush(RawValue ?? Type.Default ? ForeColor : Color.White), new PointF(xOffset + width / 4 - falseLabelSize.Width / 2, Height / 2 - falseLabelSize.Height / 2));
+            g.DrawString("False", Font, new SolidBrush(RawValue ?? Type.Default ? ForeColor : Color.White), new PointF(xOffset + width / 4 - falseLabelSize.Width / 2, 16 - falseLabelSize.Height / 2));
 
             SizeF trueLabelSize = g.MeasureString("True", Font);
 
-            g.DrawString("True", Font, new SolidBrush(RawValue ?? Type.Default ? Color.White : ForeColor), new PointF(xOffset + halfWidth + width / 4 - trueLabelSize.Width / 2, Height / 2 - trueLabelSize.Height / 2));
+            g.DrawString("True", Font, new SolidBrush(RawValue ?? Type.Default ? Color.White : ForeColor), new PointF(xOffset + halfWidth + width / 4 - trueLabelSize.Width / 2, 16 - trueLabelSize.Height / 2));
 
         }
         protected override void OnMouseClick(MouseEventArgs e)
@@ -94,6 +94,6 @@ namespace Aadev.JTF.Editor.EditorItems
                 Value = (bool?)Value is false;
             }
         }
-        protected override JToken CreateValue() => Value = Type.Default;
+        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
     }
 }

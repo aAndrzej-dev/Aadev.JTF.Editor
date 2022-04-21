@@ -34,10 +34,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
-        internal StringEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
-        {
-
-        }
+        internal StringEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
 
         protected override void OnPaint(PaintEventArgs e)
@@ -94,7 +91,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseMove(e);
         }
-        protected override JToken CreateValue() => Value = Type.Default;
+        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
         private void CreateTextBox()
         {
             if (IsInvalidValueType)

@@ -56,7 +56,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             if (IsInvalidValueType)
                 return;
-            y = 38;
+            y = !CanCollapse ? 10 : 38;
 
             List<string> Twins = new();
 
@@ -99,7 +99,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             base.OnExpandChanged();
         }
-        protected override JToken CreateValue() => Value = new JObject();
+        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
 
         private int UpdateLayout(EditorItem bei)
         {
@@ -152,12 +152,14 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             bei.HeightChanged += (sender, e) =>
             {
+                if (sender is not EditorItem bei) return;
                 y = UpdateLayout(bei);
                 Height = y;
 
             };
             bei.ValueChanged += (sender, e) =>
             {
+                if (sender is not EditorItem bei) return;
                 if (bei.IsSaveable)
                 {
                     RawValue[bei.Type.Name!] = bei.Value;
@@ -172,6 +174,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.TwinTypeChanged += (sender, e) =>
             {
+                if (sender is not EditorItem bei) return;
                 Controls.Remove(bei);
 
 

@@ -7,7 +7,7 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal sealed class EnumEditorItem : EditorItem
     {
-        private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Type.Values.Contains(RawValue) && !Type.CanUseCustomValue;
+        private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Type.Values.Contains(RawValue) && !Type.AllowCustomValues;
         private JToken _value = JValue.CreateNull();
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
         private Rectangle comboBoxBounds = Rectangle.Empty;
@@ -17,7 +17,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private string? RawValue
         {
-            get => _value.Type == Type.JsonType ? (Type.Values.Contains((string?)_value) || Type.CanUseCustomValue ? ((string?)_value ?? Type.Default) : null) : (_value.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
+            get => _value.Type == Type.JsonType ? (Type.Values.Contains((string?)_value) || Type.AllowCustomValues ? ((string?)_value ?? Type.Default) : null) : (_value.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
         }
         public override JToken Value
         {
@@ -32,9 +32,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         protected override bool IsFocused => Focused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
         internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
-        internal EnumEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
-        {
-        }
+        internal EnumEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
 
 
@@ -112,6 +110,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (comboBox is not null)
                 return;
 
+
             comboBox = new ComboBox
             {
                 Font = Font,
@@ -143,7 +142,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
 
-            if (Type.CanUseCustomValue)
+            if (Type.AllowCustomValues)
             {
                 comboBox.DropDownStyle = ComboBoxStyle.DropDown;
             }
@@ -159,6 +158,9 @@ namespace Aadev.JTF.Editor.EditorItems
                 comboBox = null;
                 Invalidate();
             };
+
+
+
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
@@ -186,6 +188,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseClick(e);
         }
-        protected override JToken CreateValue() => Value = Type.Default;
+        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
     }
 }

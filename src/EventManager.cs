@@ -20,10 +20,7 @@ namespace Aadev.JTF.Editor
 
         public bool InvokeEvent(string Id, object? Value)
         {
-            ChangedEvent? ce = chnagedEvents.FirstOrDefault(x => x.Id == Id);
-
-
-            if (ce is null)
+            if (chnagedEvents.FirstOrDefault(x => x.Id == Id) is not ChangedEvent ce)
             {
                 return false;
             }
@@ -36,7 +33,7 @@ namespace Aadev.JTF.Editor
     internal class ChangedEvent
     {
         private object? value;
-        public string Id;
+        public string Id { get; }
         public object? Value { get => value; set { this.value = value; Event?.Invoke(this, new ChangedEventArgs(this.value)); } }
         public event ChangedValueEventHandler? Event;
 
