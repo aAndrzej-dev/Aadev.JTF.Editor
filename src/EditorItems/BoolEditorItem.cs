@@ -27,9 +27,9 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        private new JtBool Type => (JtBool)base.Type;
+        private new JtBool Type => (JtBool)base.Node;
 
-        internal BoolEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal BoolEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -94,6 +94,6 @@ namespace Aadev.JTF.Editor.EditorItems
                 Value = (bool?)Value is false;
             }
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
+        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
     }
 }

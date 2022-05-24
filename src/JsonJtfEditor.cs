@@ -43,7 +43,7 @@ namespace Aadev.JTF.Editor
             }
             catch
             {
-                Root = template.Root.CreateDefaultToken();
+                Root = template.Root.CreateDefaultValue();
             }
 
             eventManager = new EventManager();

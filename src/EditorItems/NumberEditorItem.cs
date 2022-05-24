@@ -18,7 +18,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private JValue? RawValue
         {
-            get => _value.Type == Type.JsonType ? _value : (_value.Type is JTokenType.Null ? new JValue(0) : null);
+            get => _value.Type == Node.JsonType ? _value : (_value.Type is JTokenType.Null ? new JValue(0) : null);
             set => _value = value ?? JValue.CreateNull();
         }
         public override JToken Value
@@ -36,12 +36,12 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             get
             {
-                if (Type.Required)
+                if (Node.Required)
                     return true;
                 if (Value.Type == JTokenType.Null)
                     return false;
 
-                return Type switch
+                return Node switch
                 {
                     JtByte jtByte => jtByte.Default != (byte?)RawValue,
                     JtShort jtShort => jtShort.Default != (short?)RawValue,
@@ -54,7 +54,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal NumberEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal NumberEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
 
 
@@ -110,7 +110,7 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnGotFocus(e);
             CreateTextBox();
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
+        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
 
         private void CreateTextBox()
         {
@@ -136,12 +136,12 @@ namespace Aadev.JTF.Editor.EditorItems
             };
 
 
-            textBox.Location = new Point(xOffset + 10, 16 - textBox.Height / 2 + 2);
+            textBox.Location = new Point(xOffset + 10, 16 - textBox.Height / 2);
             textBox.Width = Width - xOffset - 20 - xRightOffset;
             textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             textBox.Text = RawValue!.ToString();
 
-            textBox.KeyPress += (s, e) => e.Handled = !char.IsDigit(e.KeyChar) && e.KeyChar != '-' && !char.IsControl(e.KeyChar) && (e.KeyChar != ',' || (Type.Type != JtTokenType.Float && Type.Type != JtTokenType.Double));
+            textBox.KeyPress += (s, e) => e.Handled = !char.IsDigit(e.KeyChar) && e.KeyChar != '-' && !char.IsControl(e.KeyChar) && (e.KeyChar != ',' || (Node.Type != JtNodeType.Float && Node.Type != JtNodeType.Double));
 
             Controls.Add(textBox);
 
@@ -151,7 +151,7 @@ namespace Aadev.JTF.Editor.EditorItems
             textBox.LostFocus += (s, e) =>
             {
 
-                if (Type is JtByte jtByte)
+                if (Node is JtByte jtByte)
                 {
                     if (BigInteger.TryParse(textBox.Text, out BigInteger b))
                     {
@@ -162,7 +162,7 @@ namespace Aadev.JTF.Editor.EditorItems
                         textBox.Undo();
                     }
                 }
-                else if (Type is JtShort jtShort)
+                else if (Node is JtShort jtShort)
                 {
                     if (BigInteger.TryParse(textBox.Text, out BigInteger b))
                     {
@@ -173,7 +173,7 @@ namespace Aadev.JTF.Editor.EditorItems
                         textBox.Undo();
                     }
                 }
-                else if (Type is JtInt jtInt)
+                else if (Node is JtInt jtInt)
                 {
                     if (BigInteger.TryParse(textBox.Text, out BigInteger b))
                     {
@@ -184,7 +184,7 @@ namespace Aadev.JTF.Editor.EditorItems
                         textBox.Undo();
                     }
                 }
-                else if (Type is JtLong jtLong)
+                else if (Node is JtLong jtLong)
                 {
                     if (BigInteger.TryParse(textBox.Text, out BigInteger b))
                     {
@@ -195,14 +195,14 @@ namespace Aadev.JTF.Editor.EditorItems
                         textBox.Undo();
                     }
                 }
-                else if (Type is JtFloat jtFloat)
+                else if (Node is JtFloat jtFloat)
                 {
 
                     if (float.TryParse(textBox.Text, out float b))
                         Value = MathF.Min(jtFloat.Max, MathF.Max(jtFloat.Min, b));
                     else textBox.Undo();
                 }
-                else if (Type is JtDouble jtDouble)
+                else if (Node is JtDouble jtDouble)
                 {
                     if (double.TryParse(textBox.Text, out double b))
                         Value = Math.Min(jtDouble.Max, Math.Max(jtDouble.Min, b));

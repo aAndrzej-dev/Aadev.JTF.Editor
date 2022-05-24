@@ -14,7 +14,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
         protected override bool IsFocused => Focused || textBox?.Focused is true;
 
-        private new JtString Type => (JtString)base.Type;
+
+        private new JtString Type => (JtString)base.Node;
 
 
         private string? RawValue
@@ -34,7 +35,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
-        internal StringEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal StringEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
 
         protected override void OnPaint(PaintEventArgs e)
@@ -91,7 +92,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseMove(e);
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
+        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
         private void CreateTextBox()
         {
             if (IsInvalidValueType)
@@ -116,7 +117,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-            textBox.Location = new Point(textBoxBounds.X + 10, 16 - textBox.Height / 2 + 2);
+            textBox.Location = new Point(textBoxBounds.X + 10, 16 - textBox.Height / 2);
             textBox.Width = Width - textBoxBounds.X - 20 - xRightOffset;
             textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 

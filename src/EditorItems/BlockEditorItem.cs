@@ -10,9 +10,10 @@ namespace Aadev.JTF.Editor.EditorItems
     internal sealed class BlockEditorItem : EditorItem
     {
         private int y;
+        private FocusableControl? focusControl;
         private JToken _value = JValue.CreateNull();
 
-        private new JtBlock Type => (JtBlock)base.Type;
+        private new JtBlock Type => (JtBlock)base.Node;
 
 
         private JObject RawValue
@@ -37,19 +38,28 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
+        protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
+
         internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && RawValue.Count > 0);
 
-        internal BlockEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
+        internal BlockEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
             SetStyle(ControlStyles.ContainerControl, true);
+
+
+
         }
+
+
+
+
 
         protected override void OnExpandChanged()
         {
             if (!Expanded)
             {
                 Height = 32;
-
+                focusControl = null;
                 Controls.Clear();
                 base.OnExpandChanged();
                 return;
@@ -57,13 +67,41 @@ namespace Aadev.JTF.Editor.EditorItems
             if (IsInvalidValueType)
                 return;
             y = !CanCollapse ? 10 : 38;
+            if (!Type.IsRoot)
+            {
+
+                focusControl = new FocusableControl
+                {
+                    Height = 0,
+                    Width = 0,
+                    Top = 0,
+                    Left = 0
+                };
+                focusControl.GotFocus += (s, e) => Invalidate();
+                focusControl.LostFocus += (s, e) => Invalidate();
+                focusControl.KeyDown += (s, e) =>
+                {
+                    if (IsInvalidValueType)
+                        return;
+
+                    if (Type.Type.IsContainerType && e.KeyCode == Keys.Space)
+                    {
+                        Expanded = !Expanded;
+                    }
+                };
+                Controls.Add(focusControl);
+                focusControl?.Focus();
+            }
+
+
+
 
             List<string> Twins = new();
 
-            foreach (JtToken item in Type.Children)
+            foreach (JtNode item in Type.Children)
             {
 
-                JtToken[]? twinFamily = item.GetTwinFamily();
+                JtNode[]? twinFamily = item.GetTwinFamily();
 
 
                 if (twinFamily.Length > 1)
@@ -73,7 +111,7 @@ namespace Aadev.JTF.Editor.EditorItems
                         continue;
                     }
 
-                    JtToken? t = twinFamily.FirstOrDefault(x => x.JsonType == RawValue[item.Name!]?.Type);
+                    JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == RawValue[item.Name!]?.Type);
 
                     if (t is null)
                     {
@@ -99,8 +137,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             base.OnExpandChanged();
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
-
+        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
         private int UpdateLayout(EditorItem bei)
         {
             int oy = bei.Top + bei.Height + 5;
@@ -121,7 +158,7 @@ namespace Aadev.JTF.Editor.EditorItems
             y = oy + 10;
             return y;
         }
-        private (int, EditorItem) CreateEditorItem(JtToken type, int y, bool resizeOnCreate = false)
+        private (int, EditorItem) CreateEditorItem(JtNode type, int y, bool resizeOnCreate = false)
         {
             EditorItem bei;
             if (resizeOnCreate)
@@ -162,11 +199,11 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (sender is not EditorItem bei) return;
                 if (bei.IsSaveable)
                 {
-                    RawValue[bei.Type.Name!] = bei.Value;
+                    RawValue[bei.Node.Name!] = bei.Value;
                 }
                 else
                 {
-                    RawValue.Remove(bei.Type.Name!);
+                    RawValue.Remove(bei.Node.Name!);
                 }
 
                 OnValueChanged();
@@ -178,7 +215,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 Controls.Remove(bei);
 
 
-                CreateEditorItem(e.NewTwinType!, bei.Top, true);
+                CreateEditorItem(e.NewTwinNode!, bei.Top, true);
 
 
             };
@@ -196,6 +233,14 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 item.CreateEventHandlers();
             }
+        }
+        protected override void OnMouseClick(MouseEventArgs e)
+        {
+
+
+            base.OnMouseClick(e);
+
+            focusControl?.Focus();
         }
         protected override void OnResize(EventArgs e)
         {

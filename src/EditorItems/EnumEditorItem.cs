@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 namespace Aadev.JTF.Editor.EditorItems
 {
@@ -13,11 +14,13 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle comboBoxBounds = Rectangle.Empty;
         private ComboBox? comboBox;
 
-        private new JtEnum Type => (JtEnum)base.Type;
+        private new JtEnum Type => (JtEnum)base.Node;
 
-        private string? RawValue
+        private JtEnum.EnumValue RawValue
         {
-            get => _value.Type == Type.JsonType ? (Type.Values.Contains((string?)_value) || Type.AllowCustomValues ? ((string?)_value ?? Type.Default) : null) : (_value.Type is JTokenType.Null ? Type.Default : null); set => _value = new JValue(value);
+            get => _value.Type == Type.JsonType ? (Type.Values.Any(x => x.Name == (string?)_value) || Type.AllowCustomValues ? (Type.Values.FirstOrNull(x => x.Name == (string?)_value) ?? Type.Values.FirstOrNull(x => x.Name == Type.Default) ?? new JtEnum.EnumValue()) : new JtEnum.EnumValue()) : (_value.Type is JTokenType.Null ? Type.Values.FirstOrNull(x => x.Name == Type.Default) ?? new JtEnum.EnumValue() : new JtEnum.EnumValue());
+
+            set => _value = new JValue(value.Name);
         }
         public override JToken Value
         {
@@ -32,7 +35,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         protected override bool IsFocused => Focused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
         internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
-        internal EnumEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal EnumEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
 
 
 
@@ -85,9 +88,9 @@ namespace Aadev.JTF.Editor.EditorItems
             if (comboBox == null)
             {
 
-                SizeF sf = e.Graphics.MeasureString(RawValue, Font);
+                SizeF sf = e.Graphics.MeasureString(RawValue.Name, Font);
 
-                e.Graphics.DrawString(RawValue, Font, new SolidBrush(ForeColor), new PointF(xOffset + 12, 16 - sf.Height / 2));
+                e.Graphics.DrawString(RawValue.Name, Font, new SolidBrush(ForeColor), new PointF(xOffset + 12, 16 - sf.Height / 2));
             }
             if (createComboBox)
             {
@@ -122,7 +125,7 @@ namespace Aadev.JTF.Editor.EditorItems
             };
 
 
-            comboBox.Location = new System.Drawing.Point(xOffset + 10, 14 - comboBox.Height / 2);
+            comboBox.Location = new System.Drawing.Point(xOffset + 10, 16 - comboBox.Height / 2 - 4);
             comboBox.Width = Width - xOffset - 20 - xRightOffset;
             comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
@@ -134,7 +137,7 @@ namespace Aadev.JTF.Editor.EditorItems
             comboBox.DroppedDown = true;
 
 
-            foreach (string? item in Type.Values)
+            foreach (JtEnum.EnumValue? item in Type.Values)
             {
                 if (item is null)
                     continue;
@@ -147,7 +150,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 comboBox.DropDownStyle = ComboBoxStyle.DropDown;
             }
 
-            comboBox.Text = RawValue;
+            comboBox.Text = RawValue.Name;
 
             comboBox.SelectedIndexChanged += (sender, eventArgs) => Value = comboBox?.Text;
 
@@ -188,6 +191,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseClick(e);
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
+        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
     }
 }

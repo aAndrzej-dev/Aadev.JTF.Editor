@@ -13,9 +13,12 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle addNewButtonBounds = Rectangle.Empty;
         private JToken _value = JValue.CreateNull();
         private int y;
+        private FocusableControl? focusControl;
         private readonly Dictionary<string, EditorItem> objectsArray = new();
         private readonly ContextMenuStrip? cmsPrefabSelect;
-        private new JtArray Type => (JtArray)base.Type;
+
+
+        private new JtArray Type => (JtArray)base.Node;
 
         public override JToken Value
         {
@@ -28,7 +31,8 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
         internal override bool IsSaveable => Type.Required || Value.Type != JTokenType.Null;
-        internal ArrayEditorItem(JtToken type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
+        protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
+        internal ArrayEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
         {
             SetStyle(ControlStyles.ContainerControl, true);
             if (Type.Prefabs.Count <= 1)
@@ -40,7 +44,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-            foreach (JtToken? item in Type.Prefabs)
+            foreach (JtNode? item in Type.Prefabs)
             {
                 ToolStripMenuItem? tsmi = new ToolStripMenuItem() { Text = item.Type.DisplayName, Tag = item };
 
@@ -69,7 +73,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
 
 
-            if (control.Tag is not JtToken prefab)
+            if (control.Tag is not JtNode prefab)
                 return;
 
 
@@ -133,12 +137,38 @@ namespace Aadev.JTF.Editor.EditorItems
             if (!Expanded)
             {
 
+                focusControl = null;
                 Controls.Clear();
                 objectsArray.Clear();
+
                 Height = 32;
                 base.OnExpandChanged();
                 return;
             }
+
+
+            focusControl = new FocusableControl
+            {
+                Height = 0,
+                Width = 0,
+                Top = 0,
+                Left = 0
+            };
+            focusControl.GotFocus += (s, e) => Invalidate();
+            focusControl.LostFocus += (s, e) => Invalidate();
+            focusControl.KeyDown += (s, e) =>
+            {
+                if (IsInvalidValueType)
+                    return;
+
+                if (Type.Type.IsContainerType && e.KeyCode == Keys.Space)
+                {
+                    Expanded = !Expanded;
+                }
+            };
+            Controls.Add(focusControl);
+            focusControl?.Focus();
+
 
             y = 38;
 
@@ -228,7 +258,7 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
 
-        protected override JToken CreateValue() => Value = Type.CreateDefaultToken();
+        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
 
         private void EnsureValue()
         {
@@ -289,7 +319,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 Height = y;
             }
         }
-        private void CreateArrayItem(int index, JtToken prefab, JToken? itemValue = null, bool focus = false)
+        private void CreateArrayItem(int index, JtNode prefab, JToken? itemValue = null, bool focus = false)
         {
             EditorItem bei = Create(prefab, itemValue, new EventManager());
 
@@ -373,7 +403,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateObjectItem(JProperty? item = null)
         {
-            JtToken? type = Type.Prefabs[Type.DefaultPrefabIndex];
+            JtNode? type = Type.Prefabs[Type.DefaultPrefabIndex];
             EditorItem bei = Create(type, null, new EventManager());
 
 
@@ -448,8 +478,8 @@ namespace Aadev.JTF.Editor.EditorItems
                         return;
                     }
 
-                    objectsArray.Remove(keyValuePair?.Key);
-                    obj.Remove(keyValuePair?.Key);
+                    objectsArray.Remove(keyValuePair?.Key!);
+                    obj.Remove(keyValuePair?.Key!);
 
                     objectsArray.Add(bei.DynamicName!, bei);
                 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Aadev.JTF.Editor.EditorItems;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,42 +8,45 @@ namespace Aadev.JTF.Editor
     internal class EventManager
     {
         private readonly List<ChangedEvent> chnagedEvents = new();
-        public bool RegistryEvent(string Id, object? Value)
+        public bool RegistryEvent(EditorItem editorItem, object? value)
         {
-            if (chnagedEvents.Any(x => x.Id == Id))
+            if (chnagedEvents.Any(x => x.Id == editorItem.Node.Id))
             {
                 return false;
             }
 
-            chnagedEvents.Add(new ChangedEvent(Id, Value));
+            chnagedEvents.Add(new ChangedEvent(editorItem, value));
             return true;
         }
 
-        public bool InvokeEvent(string Id, object? Value)
+        public bool InvokeEvent(string id, object? value)
         {
-            if (chnagedEvents.FirstOrDefault(x => x.Id == Id) is not ChangedEvent ce)
+            if (chnagedEvents.FirstOrDefault(x => x.Id == id) is not ChangedEvent ce)
             {
                 return false;
             }
 
-            ce.Invoke(Value);
+            ce.Invoke(value);
             return true;
         }
-        public ChangedEvent? GetEvent(string Id) => chnagedEvents.FirstOrDefault(x => x.Id == Id);
+        public ChangedEvent? GetEvent(string id) => chnagedEvents.FirstOrDefault(x => x.Id == id);
     }
     internal class ChangedEvent
     {
         private object? value;
-        public string Id { get; }
+        public string Id => EditorItem.Node.Id!;
+        public EditorItem EditorItem { get; }
         public object? Value { get => value; set { this.value = value; Event?.Invoke(this, new ChangedEventArgs(this.value)); } }
         public event ChangedValueEventHandler? Event;
 
-        public ChangedEvent(string Id, object? Value)
+        public ChangedEvent(EditorItem editorItem, object? value)
         {
-            this.Id = Id;
-            this.Value = Value;
+            EditorItem = editorItem;
+            if (EditorItem.Node.Id is null)
+                throw new Exception("Editor item must have id in events");
+            Value = value;
         }
-        public void Invoke(object? Value) => this.Value = Value;
+        public void Invoke(object? value) => Value = value;
     }
     internal class ChangedEventArgs : EventArgs
     {
