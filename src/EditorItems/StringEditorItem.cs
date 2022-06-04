@@ -15,12 +15,12 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override bool IsFocused => Focused || textBox?.Focused is true;
 
 
-        private new JtString Type => (JtString)base.Node;
+        private new JtString Node => (JtString)base.Node;
 
 
         private string? RawValue
         {
-            get => _value.Type == Type.JsonType ? ((string?)_value ?? Type.Default) : (_value.Type is JTokenType.Null ? Type.Default : null);
+            get => _value.Type == Node.JsonType ? ((string?)_value ?? Node.Default) : (_value.Type is JTokenType.Null ? Node.Default : null);
             set => _value = new JValue(value);
         }
         public override JToken Value
@@ -34,8 +34,8 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
-        internal StringEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (string?)Value != Node.Default);
+        internal StringEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
 
 
         protected override void OnPaint(PaintEventArgs e)
@@ -44,11 +44,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (IsInvalidValueType)
                 return;
-            bool createTextBox = false;
-            if (Focused && textBoxBounds == Rectangle.Empty)
-            {
-                createTextBox = true;
-            }
+            //bool createTextBox = false;
+            //if (Focused && textBoxBounds == Rectangle.Empty)
+            //{
+            //    createTextBox = true;
+            //}
 
 
             textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
@@ -61,10 +61,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 e.Graphics.DrawString(RawValue, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
-            if (createTextBox)
-            {
-                CreateTextBox();
-            }
+            //if (createTextBox)
+            //{
+            //    CreateTextBox();
+            //}
 
         }
         protected override void OnMouseClick(MouseEventArgs e)
@@ -92,7 +92,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseMove(e);
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
+        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
         private void CreateTextBox()
         {
             if (IsInvalidValueType)

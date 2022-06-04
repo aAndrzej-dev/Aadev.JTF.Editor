@@ -8,17 +8,17 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal sealed class EnumEditorItem : EditorItem
     {
-        private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Type.Values.Contains(RawValue) && !Type.AllowCustomValues;
+        private bool InvalidValue => _value is not null && !string.IsNullOrWhiteSpace(_value.ToString()) && !Node.Values.Contains(RawValue) && !Node.AllowCustomValues;
         private JToken _value = JValue.CreateNull();
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
         private Rectangle comboBoxBounds = Rectangle.Empty;
         private ComboBox? comboBox;
 
-        private new JtEnum Type => (JtEnum)base.Node;
+        private new JtEnum Node => (JtEnum)base.Node;
 
         private JtEnum.EnumValue RawValue
         {
-            get => _value.Type == Type.JsonType ? (Type.Values.Any(x => x.Name == (string?)_value) || Type.AllowCustomValues ? (Type.Values.FirstOrNull(x => x.Name == (string?)_value) ?? Type.Values.FirstOrNull(x => x.Name == Type.Default) ?? new JtEnum.EnumValue()) : new JtEnum.EnumValue()) : (_value.Type is JTokenType.Null ? Type.Values.FirstOrNull(x => x.Name == Type.Default) ?? new JtEnum.EnumValue() : new JtEnum.EnumValue());
+            get => _value.Type == Node.JsonType ? (Node.Values.Any(x => x.Name == (string?)_value) || Node.AllowCustomValues ? (Node.Values.FirstOrNull(x => x.Name == (string?)_value) ?? Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue()) : new JtEnum.EnumValue()) : (_value.Type is JTokenType.Null ? Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue() : new JtEnum.EnumValue());
 
             set => _value = new JValue(value.Name);
         }
@@ -34,8 +34,8 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         protected override bool IsFocused => Focused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
-        internal override bool IsSaveable => Type.Required || (Value.Type != JTokenType.Null && (string?)Value != Type.Default);
-        internal EnumEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager) { }
+        internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (string?)Value != Node.Default);
+        internal EnumEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
 
 
 
@@ -120,15 +120,23 @@ namespace Aadev.JTF.Editor.EditorItems
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(80, 80, 80),
                 ForeColor = ForeColor,
-                AutoSize = false,
-                DropDownStyle = ComboBoxStyle.DropDownList,
+                AutoSize = false
             };
 
 
             comboBox.Location = new System.Drawing.Point(xOffset + 10, 16 - comboBox.Height / 2 - 4);
             comboBox.Width = Width - xOffset - 20 - xRightOffset;
             comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-
+            if (Node.AllowCustomValues)
+            {
+                comboBox.DropDownStyle = ComboBoxStyle.DropDown;
+                comboBox.AutoCompleteMode = AutoCompleteMode.Suggest;
+                comboBox.AutoCompleteSource = AutoCompleteSource.ListItems;
+            }
+            else
+            {
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            }
 
 
             Controls.Add(comboBox);
@@ -137,7 +145,7 @@ namespace Aadev.JTF.Editor.EditorItems
             comboBox.DroppedDown = true;
 
 
-            foreach (JtEnum.EnumValue? item in Type.Values)
+            foreach (JtEnum.EnumValue? item in Node.Values)
             {
                 if (item is null)
                     continue;
@@ -145,10 +153,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
 
-            if (Type.AllowCustomValues)
-            {
-                comboBox.DropDownStyle = ComboBoxStyle.DropDown;
-            }
+
 
             comboBox.Text = RawValue.Name;
 
@@ -191,6 +196,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseClick(e);
         }
-        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
+        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
     }
 }

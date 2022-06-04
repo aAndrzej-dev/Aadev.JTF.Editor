@@ -18,7 +18,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private readonly ContextMenuStrip? cmsPrefabSelect;
 
 
-        private new JtArray Type => (JtArray)base.Node;
+        private new JtArray Node => (JtArray)base.Node;
 
         public override JToken Value
         {
@@ -30,12 +30,12 @@ namespace Aadev.JTF.Editor.EditorItems
                 OnValueChanged();
             }
         }
-        internal override bool IsSaveable => Type.Required || Value.Type != JTokenType.Null;
+        internal override bool IsSaveable => Node.Required || Value.Type != JTokenType.Null;
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-        internal ArrayEditorItem(JtNode type, JToken? token, EventManager eventManager) : base(type, token, eventManager)
+        internal ArrayEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor)
         {
             SetStyle(ControlStyles.ContainerControl, true);
-            if (Type.Prefabs.Count <= 1)
+            if (Node.Prefabs.Count <= 1)
                 return;
 
 
@@ -44,7 +44,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-            foreach (JtNode? item in Type.Prefabs)
+            foreach (JtNode? item in Node.Prefabs)
             {
                 ToolStripMenuItem? tsmi = new ToolStripMenuItem() { Text = item.Type.DisplayName, Tag = item };
 
@@ -80,7 +80,7 @@ namespace Aadev.JTF.Editor.EditorItems
             Expanded = true;
             y -= 5;
             EnsureValue();
-            if (Type.MakeAsObject)
+            if (Node.MakeAsObject)
                 CreateObjectItem();
             else
                 CreateArrayItem(((JArray)Value).Count, prefab, null, true);
@@ -100,7 +100,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             Graphics g = e.Graphics;
 
-            if (!Type.IsFixedSize)
+            if (!Node.IsFixedSize)
             {
                 addNewButtonBounds = new Rectangle(Width - 30 - xRightOffset, yOffset, 30, innerHeight);
                 g.FillRectangle(new SolidBrush(Color.Green), addNewButtonBounds);
@@ -112,10 +112,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
             string msg;
 
-            if (Type.IsFixedSize)
+            if (Node.IsFixedSize)
             {
-                if (Value.Count() != Type.FixedSize)
-                    msg = string.Format(Properties.Resources.ArrayInvalidElementsCount, Value.Count(), Type.FixedSize);
+                if (Value.Count() != Node.FixedSize)
+                    msg = string.Format(Properties.Resources.ArrayInvalidElementsCount, Value.Count(), Node.FixedSize);
                 else msg = string.Format(Properties.Resources.ArrayElementsCount, Value.Count().ToString());
             }
             else
@@ -161,7 +161,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (IsInvalidValueType)
                     return;
 
-                if (Type.Type.IsContainerType && e.KeyCode == Keys.Space)
+                if (Node.Type.IsContainerType && e.KeyCode == Keys.Space)
                 {
                     Expanded = !Expanded;
                 }
@@ -174,7 +174,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             EnsureValue();
 
-            if (Type.MakeAsObject)
+            if (Node.MakeAsObject)
                 LoadAsObject();
             else
                 LoadAsArray();
@@ -195,7 +195,7 @@ namespace Aadev.JTF.Editor.EditorItems
             EditorItem bei = (EditorItem)e.Control;
 
             EnsureValue();
-            if (Type.MakeAsObject)
+            if (Node.MakeAsObject)
             {
 
                 objectsArray.Remove(bei.DynamicName!);
@@ -219,16 +219,24 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (IsInvalidValueType)
                 return;
+            if (!Expanded)
+            {
+                Focus();
+            }
+            else
+            {
+                focusControl?.Focus();
+            }
 
             if (addNewButtonBounds.Contains(e.Location))
             {
 
-                if (Type.Prefabs.Count == 0)
+                if (Node.Prefabs.Count == 0)
                     return;
 
 
 
-                if (Type.Prefabs.Count > 1)
+                if (Node.Prefabs.Count > 1)
                 {
                     cmsPrefabSelect!.Show(MousePosition);
                     return;
@@ -237,10 +245,10 @@ namespace Aadev.JTF.Editor.EditorItems
                 y -= 5;
 
                 EnsureValue();
-                if (Type.MakeAsObject)
+                if (Node.MakeAsObject)
                     CreateObjectItem();
                 else
-                    CreateArrayItem(((JArray)Value).Count, Type.Prefabs[Type.DefaultPrefabIndex], null, true);
+                    CreateArrayItem(((JArray)Value).Count, Node.Prefabs[Node.DefaultPrefabIndex], null, true);
 
                 y += 5;
                 Height = y;
@@ -258,11 +266,11 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
 
-        protected override JToken CreateValue() => Value = Type.CreateDefaultValue();
+        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
 
         private void EnsureValue()
         {
-            if (Value.Type != Type.JsonType)
+            if (Value.Type != Node.JsonType)
                 CreateValue();
         }
 
@@ -272,17 +280,17 @@ namespace Aadev.JTF.Editor.EditorItems
             SuspendLayout();
             int oy = bei.Top;
             int index = 0;
-            if (!Type.MakeAsObject)
+            if (!Node.MakeAsObject)
             {
                 index = bei.ArrayIndex;
             }
 
-            foreach (EditorItem control in Controls.Cast<EditorItem>().Where(x => x.Top > bei.Top))
+            foreach (EditorItem control in Controls.Cast<Control>().Where(x => x.Top > bei.Top && x is EditorItem))
             {
                 control.Top = oy;
                 oy += control.Height;
                 oy += 5;
-                if (!Type.MakeAsObject)
+                if (!Node.MakeAsObject)
                 {
                     control.ArrayIndex = index;
                     index++;
@@ -299,7 +307,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             for (int i = 0; i < array.Count; i++)
             {
-                CreateArrayItem(i, Type.Prefabs.FirstOrDefault(x => x.JsonType == array[i].Type) ?? Type.Prefabs[Type.DefaultPrefabIndex], array[i]);
+                CreateArrayItem(i, Node.Prefabs.FirstOrDefault(x => x.JsonType == array[i].Type) ?? Node.Prefabs[Node.DefaultPrefabIndex], array[i]);
             }
             y += 5;
             if (Expanded)
@@ -321,7 +329,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateArrayItem(int index, JtNode prefab, JToken? itemValue = null, bool focus = false)
         {
-            EditorItem bei = Create(prefab, itemValue, new EventManager());
+            EditorItem bei = Create(prefab, itemValue, new EventManager(), RootEditor);
 
             JArray value = (JArray)Value;
 
@@ -403,8 +411,8 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateObjectItem(JProperty? item = null)
         {
-            JtNode? type = Type.Prefabs[Type.DefaultPrefabIndex];
-            EditorItem bei = Create(type, null, new EventManager());
+            JtNode? type = Node.Prefabs[Node.DefaultPrefabIndex];
+            EditorItem bei = Create(type, null, new EventManager(), RootEditor);
 
 
             bei.Location = new Point(10, y);
@@ -418,15 +426,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (item is null)
             {
-                newDynamicName = $"new {Type.Name} item";
+                newDynamicName = $"new {Node.Name} item";
                 if (objectsArray.ContainsKey(newDynamicName))
                 {
                     int i = 1;
-                    while (objectsArray.ContainsKey($"new {Type.Name} item {i}"))
+                    while (objectsArray.ContainsKey($"new {Node.Name} item {i}"))
                     {
                         i++;
                     }
-                    newDynamicName = $"new {Type.Name} item {i}";
+                    newDynamicName = $"new {Node.Name} item {i}";
 
 
                 }

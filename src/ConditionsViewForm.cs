@@ -27,18 +27,30 @@ namespace Aadev.JTF.Editor
 
         private void DataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
+            if (e.RowIndex == -1)
+                return;
+            string? id = dataGridView.Rows[e.RowIndex].Tag?.ToString();
+            if (id is null)
+            {
+                MessageBox.Show("Something went wrong");
+                return;
+            }
+            EditorItem? ei = editorItem.EventManager.GetEvent(id)?.EditorItem;
+
+            if (ei is null)
+            {
+                MessageBox.Show("Something went wrong");
+                return;
+            }
+
             Close();
-            EditorItem? ei = editorItem.EventManager.GetEvent(dataGridView.Rows[e.RowIndex].Tag?.ToString()!)!.EditorItem;
-
-
             Task.Factory.StartNew(() =>
             {
                 Thread.Sleep(100);
-                ei.Invoke(new FormDelegate(() => ei?.Focus()));
+                ei.Invoke(new Helpers.ControlDelegate(() => ei?.Focus()));
             });
 
 
         }
-        public delegate void FormDelegate();
     }
 }
