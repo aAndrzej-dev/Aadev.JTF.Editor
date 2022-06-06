@@ -58,16 +58,23 @@ namespace Aadev.JTF.Editor.EditorItems
 
         protected override void OnExpandChanged()
         {
+            SuspendLayout();
             if (!Expanded)
             {
                 Height = 32;
+                if (Node.IsDynamicName)
+                    Controls.Remove(focusControl);
                 focusControl = null;
                 Controls.Clear();
                 base.OnExpandChanged();
+                ResumeLayout();
                 return;
             }
             if (IsInvalidValueType)
+            {
+                ResumeLayout();
                 return;
+            }
             y = !CanCollapse ? 10 : 38;
             if (!Node.IsRoot)
             {
@@ -111,6 +118,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             else
             {
+                Controls.Remove(focusControl);
                 focusControl = null;
             }
 
@@ -165,7 +173,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-
+            ResumeLayout();
             base.OnExpandChanged();
         }
         protected override JToken CreateValue() => Value = Node.CreateDefaultValue();

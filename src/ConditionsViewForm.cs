@@ -13,7 +13,7 @@ namespace Aadev.JTF.Editor
             this.editorItem = editorItem;
             InitializeComponent();
 
-            Text = $"Condition View (beta) for {editorItem.Name}";
+            Text = $"Condition view for {editorItem.Name}";
 
             foreach (JtCondition? item in editorItem.Node.Conditions)
             {

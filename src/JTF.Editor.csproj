@@ -13,13 +13,15 @@
 	<DebugType>none</DebugType>
 	<AssemblyVersion>1.0.0.0</AssemblyVersion>
 	<FileVersion>1.0.0.0</FileVersion>
-	<Version>1.0.0-rc2</Version>
+	<Version>1.0.0</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Added option to hide conditions count
-Added '*' in name of required nodes
-Bug fixes</PackageReleaseNotes>
+    <PackageReleaseNotes>Bug fixes
+	
+Unsupported JTF properties:
+ - Fixed size arrays
+ - Display name in enum values</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>

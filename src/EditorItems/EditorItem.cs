@@ -371,7 +371,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     hasInvalidConditions = true;
                     Height = 32;
                     return;
-                    
+                   
                 }
 
                 if (Node.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true)
@@ -397,7 +397,7 @@ namespace Aadev.JTF.Editor.EditorItems
                             TabStop = false;
                         }
                     };
-               }
+            }
             else
             {
                 Height = 32;
