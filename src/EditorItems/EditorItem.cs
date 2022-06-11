@@ -140,7 +140,7 @@ namespace Aadev.JTF.Editor.EditorItems
             DrawName(g);
             DrawRemoveButton(g);
             DrawConditionsLable(g);
-            DrawDynamicName(e);
+            DrawDynamicName(g);
             DrawInvalidValueMessage(g);
         }
 
@@ -215,7 +215,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             xOffset += (int)sf.Width + 20;
         }
-        private void DrawDynamicName(PaintEventArgs e)
+        private void DrawDynamicName(Graphics g)
         {
             if (!Node.IsDynamicName)
                 return;
@@ -224,30 +224,37 @@ namespace Aadev.JTF.Editor.EditorItems
             if (Node.Type.IsContainerType)
             {
                 dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
-                e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
 
                 if (txtDynamicName is not null)
                     return;
 
 
-                SizeF sf = e.Graphics.MeasureString(DynamicName, Font);
+                SizeF sf = g.MeasureString(DynamicName, Font);
 
-                e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
+                g.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
             else
             {
-                int size = (Width - xOffset) / 2;
+                SizeF s = g.MeasureString(":", Font);
+                int size = (Width - xOffset - (int)s.Width - 10 - xRightOffset) / 2;
 
                 dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, size, innerHeight);
-                e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
+                g.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), dynamicNameTextboxBounds);
                 if (txtDynamicName is null)
                 {
 
-                    SizeF sf = e.Graphics.MeasureString(DynamicName, Font);
+                    SizeF sf = g.MeasureString(DynamicName, Font);
 
-                    e.Graphics.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
+                    g.DrawString(DynamicName, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
                 }
                 xOffset += size;
+
+
+                g.DrawString(":", Font, new SolidBrush(ForeColor), new PointF(xOffset + 5, 16 - s.Height / 2));
+
+                xOffset += (int)s.Width + 10;
+
             }
         }
         private void DrawRemoveButton(Graphics g)
@@ -369,18 +376,22 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (ce is null)
                 {
                     hasInvalidConditions = true;
+                    Expanded = false;
                     Height = 32;
+                    TabStop = true;
+
                     return;
-                   
                 }
 
                 if (Node.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true)
                 {
+                    Expanded = false;
                     Height = 32;
                     TabStop = true;
                 }
                 else
                 {
+                    Expanded = false;
                     Height = 0;
                     TabStop = false;
                 }
@@ -388,11 +399,13 @@ namespace Aadev.JTF.Editor.EditorItems
                     {
                         if (Node.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true)
                         {
+                            Expanded = false;
                             Height = 32;
                             TabStop = true;
                         }
                         else
                         {
+                            Expanded = false;
                             Height = 0;
                             TabStop = false;
                         }
@@ -400,7 +413,9 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             else
             {
+                Expanded = false;
                 Height = 32;
+                TabStop = true;
             }
         }
 
@@ -408,7 +423,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
-
+            Focus();
             if (expandButtonBounds.Contains(e.Location))
             {
                 Expanded = !Expanded;
@@ -416,6 +431,14 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             if (removeButtonBounds.Contains(e.Location))
             {
+                if (txtDynamicName is not null)
+                {
+                    DynamicName = txtDynamicName.Text;
+                    OnValueChanged();
+                    Controls.Remove(txtDynamicName);
+                    txtDynamicName = null;
+                    Invalidate();
+                }
                 Parent.Controls.Remove(this);
 
 
@@ -531,10 +554,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 Text = DynamicName,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Width = Width - xOffset - 20 - xRightOffset
             };
 
-            txtDynamicName.Location = new Point(xOffset + 10, 16 - txtDynamicName.Height / 2);
+            txtDynamicName.Location = new Point(dynamicNameTextboxBounds.X + 10, 16 - txtDynamicName.Height / 2);
+            txtDynamicName.Width = dynamicNameTextboxBounds.Width - 20;
             txtDynamicName.TextChanged += (sender, eventArgs) =>
             {
 
@@ -544,6 +567,9 @@ namespace Aadev.JTF.Editor.EditorItems
             };
             txtDynamicName.LostFocus += (sender, eventArgs) =>
             {
+                if (txtDynamicName is null)
+                    return;
+
                 DynamicName = txtDynamicName.Text;
                 OnValueChanged();
                 Controls.Remove(txtDynamicName);

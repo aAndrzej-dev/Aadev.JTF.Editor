@@ -197,9 +197,12 @@ namespace Aadev.JTF.Editor.EditorItems
             EnsureValue();
             if (Node.MakeAsObject)
             {
+                if (bei.DynamicName is not null)
+                {
+                    objectsArray.Remove(bei.DynamicName);
+                    ((JObject)Value).Remove(bei.DynamicName);
 
-                objectsArray.Remove(bei.DynamicName!);
-                ((JObject)Value).Remove(bei.DynamicName!);
+                }
 
             }
             else
@@ -485,9 +488,12 @@ namespace Aadev.JTF.Editor.EditorItems
                         bei.DynamicName = keyValuePair?.Key;
                         return;
                     }
+                    if (keyValuePair?.Key is not null)
+                    {
+                        objectsArray.Remove(keyValuePair?.Key!);
+                        obj.Remove(keyValuePair?.Key!);
+                    }
 
-                    objectsArray.Remove(keyValuePair?.Key!);
-                    obj.Remove(keyValuePair?.Key!);
 
                     objectsArray.Add(bei.DynamicName!, bei);
                 }

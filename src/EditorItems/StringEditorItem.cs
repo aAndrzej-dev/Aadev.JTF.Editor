@@ -12,7 +12,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private JToken _value = JValue.CreateNull();
         private Rectangle textBoxBounds = Rectangle.Empty;
 
-        protected override bool IsFocused => Focused || textBox?.Focused is true;
+        protected override bool IsFocused => base.IsFocused || textBox?.Focused is true;
 
 
         private new JtString Node => (JtString)base.Node;
@@ -44,12 +44,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (IsInvalidValueType)
                 return;
-            //bool createTextBox = false;
-            //if (Focused && textBoxBounds == Rectangle.Empty)
-            //{
-            //    createTextBox = true;
-            //}
-
 
             textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
             e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), textBoxBounds);
@@ -61,11 +55,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 e.Graphics.DrawString(RawValue, Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
-            //if (createTextBox)
-            //{
-            //    CreateTextBox();
-            //}
-
         }
         protected override void OnMouseClick(MouseEventArgs e)
         {
@@ -80,6 +69,11 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnGotFocus(EventArgs e)
         {
             base.OnGotFocus(e);
+
+            if (txtDynamicName is not null)
+                return;
+
+
             CreateTextBox();
         }
         protected override void OnMouseMove(MouseEventArgs e)

@@ -18,7 +18,27 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private JtEnum.EnumValue RawValue
         {
-            get => _value.Type == Node.JsonType ? (Node.Values.Any(x => x.Name == (string?)_value) || Node.AllowCustomValues ? (Node.Values.FirstOrNull(x => x.Name == (string?)_value) ?? Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue()) : new JtEnum.EnumValue()) : (_value.Type is JTokenType.Null ? Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue() : new JtEnum.EnumValue());
+            get
+            {
+                if (_value.Type == Node.JsonType)
+                {
+                    if (Node.Values.Any(x => x.Name == (string?)_value))
+                    {
+                        return Node.Values.FirstOrNull(x => x.Name == (string?)_value) ?? Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue();
+                    }
+                    if (Node.AllowCustomValues)
+                    {
+                        return new JtEnum.EnumValue((string)Value!);
+                    }
+                    return new JtEnum.EnumValue();
+                }
+                if (_value.Type is JTokenType.Null)
+                    return Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue();
+                else
+                    return new JtEnum.EnumValue();
+
+
+            }
 
             set => _value = new JValue(value.Name);
         }
@@ -27,13 +47,15 @@ namespace Aadev.JTF.Editor.EditorItems
             get => _value;
             set
             {
+                if (_value.Equals(value))
+                    return;
                 _value = value;
                 Invalidate();
                 OnValueChanged();
             }
         }
 
-        protected override bool IsFocused => Focused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
+        protected override bool IsFocused => base.IsFocused  || comboBox?.Focused is true || comboBox?.DroppedDown is true;
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (string?)Value != Node.Default);
         internal EnumEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
 
@@ -75,26 +97,16 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             }
 
-            bool createComboBox = false;
-            if (Focused && comboBoxBounds == Rectangle.Empty)
-            {
-                createComboBox = true;
-            }
-
             comboBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
             e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(80, 80, 80)), comboBoxBounds);
 
 
-            if (comboBox == null)
+            if (comboBox is null)
             {
 
                 SizeF sf = e.Graphics.MeasureString(RawValue.Name, Font);
 
                 e.Graphics.DrawString(RawValue.Name, Font, new SolidBrush(ForeColor), new PointF(xOffset + 12, 16 - sf.Height / 2));
-            }
-            if (createComboBox)
-            {
-                CreateComboBox();
             }
         }
 
@@ -102,6 +114,11 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnGotFocus(EventArgs e)
         {
             base.OnGotFocus(e);
+
+
+            if (txtDynamicName is not null)
+                return;
+
             CreateComboBox();
         }
         private void CreateComboBox()
@@ -124,7 +141,7 @@ namespace Aadev.JTF.Editor.EditorItems
             };
 
 
-            comboBox.Location = new System.Drawing.Point(xOffset + 10, 16 - comboBox.Height / 2 - 4);
+            comboBox.Location = new Point(xOffset + 10, 16 - comboBox.Height / 2 - 4);
             comboBox.Width = Width - xOffset - 20 - xRightOffset;
             comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             if (Node.AllowCustomValues)
@@ -158,6 +175,12 @@ namespace Aadev.JTF.Editor.EditorItems
             comboBox.Text = RawValue.Name;
 
             comboBox.SelectedIndexChanged += (sender, eventArgs) => Value = comboBox?.Text;
+
+
+            if (Node.AllowCustomValues)
+            {
+                comboBox.TextChanged += (sender, eventArgs) => Value = comboBox?.Text;
+            }
 
             comboBox.LostFocus += (s, e) =>
             {

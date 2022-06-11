@@ -278,11 +278,7 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnMouseClick(e);
 
-            if (!Expanded)
-            {
-                Focus();
-            }
-            else
+            if (Expanded)
             {
                 focusControl?.Focus();
             }

@@ -13,7 +13,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private JValue _value = JValue.CreateNull();
         private Rectangle textBoxBounds = Rectangle.Empty;
 
-        protected override bool IsFocused => Focused || textBox?.Focused is true;
+        protected override bool IsFocused => base.IsFocused  || textBox?.Focused is true;
 
 
         private JValue? RawValue
@@ -26,6 +26,8 @@ namespace Aadev.JTF.Editor.EditorItems
             get => _value;
             set
             {
+                if (_value.Equals(value))
+                    return;
                 _value = (JValue)value;
                 Invalidate();
                 OnValueChanged();
@@ -65,11 +67,6 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 return;
             }
-            bool createTextBox = false;
-            if (Focused && textBoxBounds == Rectangle.Empty)
-            {
-                createTextBox = true;
-            }
 
 
             textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
@@ -82,10 +79,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 e.Graphics.DrawString(RawValue.ToString(), Font, new SolidBrush(ForeColor), new PointF(xOffset + 10, 16 - sf.Height / 2));
 
-            }
-            if (createTextBox)
-            {
-                CreateTextBox();
             }
         }
         protected override void OnMouseMove(MouseEventArgs e)
@@ -108,6 +101,11 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnGotFocus(EventArgs e)
         {
             base.OnGotFocus(e);
+
+
+            if (txtDynamicName is not null)
+                return;
+
             CreateTextBox();
         }
         protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
@@ -153,46 +151,46 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 if (Node is JtByte jtByte)
                 {
-                    if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                    if (BigInteger.TryParse(textBox?.Text, out BigInteger b))
                     {
                         Value = (byte)BigInteger.Min(jtByte.Max, BigInteger.Max(jtByte.Min, b));
                     }
                     else
                     {
-                        textBox.Undo();
+                        textBox?.Undo();
                     }
                 }
                 else if (Node is JtShort jtShort)
                 {
-                    if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                    if (BigInteger.TryParse(textBox?.Text, out BigInteger b))
                     {
                         Value = (short)BigInteger.Min(jtShort.Max, BigInteger.Max(jtShort.Min, b));
                     }
                     else
                     {
-                        textBox.Undo();
+                        textBox?.Undo();
                     }
                 }
                 else if (Node is JtInt jtInt)
                 {
-                    if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                    if (BigInteger.TryParse(textBox?.Text, out BigInteger b))
                     {
                         Value = (int)BigInteger.Min(jtInt.Max, BigInteger.Max(jtInt.Min, b));
                     }
                     else
                     {
-                        textBox.Undo();
+                        textBox?.Undo();
                     }
                 }
                 else if (Node is JtLong jtLong)
                 {
-                    if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                    if (BigInteger.TryParse(textBox?.Text, out BigInteger b))
                     {
                         Value = (long)BigInteger.Min(jtLong.Max, BigInteger.Max(jtLong.Min, b));
                     }
                     else
                     {
-                        textBox.Undo();
+                        textBox?.Undo();
                     }
                 }
                 else if (Node is JtFloat jtFloat)

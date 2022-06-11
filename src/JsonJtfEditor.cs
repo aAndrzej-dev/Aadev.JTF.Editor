@@ -70,7 +70,6 @@ namespace Aadev.JTF.Editor
                 bei.Top = 0;
                 bei.Left = 0;
             }
-
         }
         public void Save(Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(Filename!, Root!.ToString(formatting));
     }
