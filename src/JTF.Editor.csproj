@@ -11,13 +11,14 @@
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
 	<DebugType>none</DebugType>
-	<AssemblyVersion>1.0.1.0</AssemblyVersion>
-	<FileVersion>1.0.1.0</FileVersion>
-	<Version>1.0.1</Version>
+	<AssemblyVersion>1.1.0.0</AssemblyVersion>
+	<FileVersion>1.1.0.0</FileVersion>
+	<Version>1.1.0-rc1</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Bug fixes ans improvements
+    <PackageReleaseNotes>Icons have been updated
+Bug fixes and performance improvements
 
 Unsupported JTF Features:
 - Fixed size arrays
@@ -28,7 +29,8 @@ Unsupported JTF Features:
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aadev.JTF" Version="1.0.2" />   
+    <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0-beta4" />
+    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc1" />
   </ItemGroup>
 
 

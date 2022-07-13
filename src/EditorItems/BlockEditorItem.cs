@@ -176,7 +176,6 @@ namespace Aadev.JTF.Editor.EditorItems
             ResumeLayout();
             base.OnExpandChanged();
         }
-        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
         private int UpdateLayout(EditorItem bei)
         {
             int oy = bei.Top + bei.Height + 5;
@@ -228,14 +227,16 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             bei.HeightChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
                 y = UpdateLayout(bei);
                 Height = y;
 
             };
             bei.ValueChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
                 if (bei.IsSaveable)
                 {
                     RawValue[bei.Node.Name!] = bei.Value;
@@ -250,7 +251,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.TwinTypeChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
                 Controls.Remove(bei);
 
 

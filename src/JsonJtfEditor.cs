@@ -12,7 +12,6 @@ namespace Aadev.JTF.Editor
         private JToken? Root;
         private string? filename;
         private EventManager? eventManager;
-        private bool showConditionsCount;
         internal static readonly ToolTip toolTip = new ToolTip() { BackColor = System.Drawing.Color.FromArgb(80, 80, 80), ForeColor = System.Drawing.Color.White, ShowAlways = true, Active = false };
 
         public event EventHandler? ValueChanged;
@@ -22,7 +21,6 @@ namespace Aadev.JTF.Editor
         public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
         public string? Filename { get => filename; set { filename = value; OnTemplateChanged(); } }
 
-        public bool ShowConditionsCount { get => showConditionsCount; set { showConditionsCount = value; Invalidate(); } }
 
 
         public JsonJtfEditor()

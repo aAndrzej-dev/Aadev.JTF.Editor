@@ -1,7 +1,10 @@
-﻿using Aadev.JTF.Types;
+﻿using Aadev.ConditionsInterpreter;
+using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -24,17 +27,15 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle discardInvalidTypeButtonBounds = Rectangle.Empty;
         private Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
         private Rectangle nameLabelBounds = Rectangle.Empty;
-        private Rectangle conditionsLabelBounds = Rectangle.Empty;
         private Rectangle twinFamilyButtonBounds;
-        private bool hasInvalidConditions;
 
 
-        protected bool HaveEventHandlersBeenCreated { get; private set; }
 
         protected int xOffset = 0;
         protected int xRightOffset = 0;
         protected int yOffset = 0;
         protected int innerHeight = 0;
+        protected bool HaveEventHandlersBeenCreated { get; private set; }
         protected JsonJtfEditor RootEditor { get; }
 
 
@@ -56,7 +57,7 @@ namespace Aadev.JTF.Editor.EditorItems
         public string? DynamicName { get => dynamicName; set { dynamicName = value; Invalidate(); } }
         protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; OnExpandChanged(); } }
 
-        protected abstract JToken CreateValue();
+        protected JToken CreateValue() => Value = Node.CreateDefaultValue();
         protected void OnValueChanged() => ValueChanged?.Invoke(this, EventArgs.Empty);
         protected virtual void OnExpandChanged()
         {
@@ -96,8 +97,10 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnGotFocus(e);
             if (Node.IsDynamicName)
             {
-                if (txtDynamicName is null) CreateDynamicNameTextBox();
-                else txtDynamicName.Focus();
+                if (txtDynamicName is null)
+                    CreateDynamicNameTextBox();
+                else
+                    txtDynamicName.Focus();
             }
             Invalidate();
         }
@@ -112,7 +115,7 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             Graphics g = e.Graphics;
 
-            if (Parent is JsonJtfEditor)
+            if (Node.IsRoot)
             {
                 Expanded = true;
                 if (Node is JtBlock && !IsInvalidValueType)
@@ -139,29 +142,11 @@ namespace Aadev.JTF.Editor.EditorItems
             DrawExpandButton(g);
             DrawName(g);
             DrawRemoveButton(g);
-            DrawConditionsLable(g);
             DrawDynamicName(g);
             DrawInvalidValueMessage(g);
         }
 
-        private void DrawConditionsLable(Graphics g)
-        {
-            if (Node.Conditions.Count > 0 && RootEditor.ShowConditionsCount)
-            {
 
-                string msg = string.Format("{0} conditions", Node.Conditions.Count.ToString());
-
-
-                SizeF msgSize = g.MeasureString(msg, Font);
-
-
-                g.DrawString(msg, Font, new SolidBrush(hasInvalidConditions ? Color.Red : ForeColor), new PointF(Width - xRightOffset - 10 - msgSize.Width, 16 - msgSize.Height / 2));
-
-
-                conditionsLabelBounds = new Rectangle((int)(Width - xRightOffset - 10 - msgSize.Width), (int)(16 - msgSize.Height / 2), (int)msgSize.Width, (int)msgSize.Height);
-                xRightOffset += (int)msgSize.Width + 20;
-            }
-        }
         private void InitDraw(Graphics g)
         {
             Color borderColor;
@@ -368,22 +353,24 @@ namespace Aadev.JTF.Editor.EditorItems
             HaveEventHandlersBeenCreated = true;
 
 
-            if (Node.Conditions.Count > 0)
+
+            if (Node.Condition is not null)
             {
 
-                ChangedEvent? ce = EventManager.GetEvent(Node.Conditions[0].VariableId!);
+                List<ChangedEvent?> vars = new List<ChangedEvent?>();
 
-                if (ce is null)
+
+                ConditionInterpreter? interpretor = new ConditionInterpreter(x =>
                 {
-                    hasInvalidConditions = true;
-                    Expanded = false;
-                    Height = 32;
-                    TabStop = true;
+                    ChangedEvent? e = EventManager.GetEvent(x);
+                    if (!vars.Contains(e))
+                        vars.Add(e);
+                    return e?.Value!;
+                }, Node.Condition);
 
-                    return;
-                }
+ 
 
-                if (Node.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true)
+                if (interpretor.ResolveCondition())
                 {
                     Expanded = false;
                     Height = 32;
@@ -395,9 +382,14 @@ namespace Aadev.JTF.Editor.EditorItems
                     Height = 0;
                     TabStop = false;
                 }
-                ce.Event += (s, ev) =>
+                foreach (ChangedEvent? ce in vars)
+                {
+                    if (ce is null)
+                        continue;
+                    ce.Event += (s, ev) =>
                     {
-                        if (Node.Conditions.Check(JtConditionCollection.CheckOperation.Or, ce.Value?.ToString()) is true)
+
+                        if (interpretor.ResolveCondition())
                         {
                             Expanded = false;
                             Height = 32;
@@ -410,6 +402,7 @@ namespace Aadev.JTF.Editor.EditorItems
                             TabStop = false;
                         }
                     };
+                }
             }
             else
             {
@@ -424,6 +417,8 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnMouseClick(e);
             Focus();
+            if (e.Button != MouseButtons.Left)
+                return;
             if (expandButtonBounds.Contains(e.Location))
             {
                 Expanded = !Expanded;
@@ -460,11 +455,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 CreateDynamicNameTextBox();
                 return;
             }
-            if (conditionsLabelBounds.Contains(e.Location))
-            {
-                new ConditionsViewForm(this).ShowDialog();
-                return;
-            }
+
 
             if (new Rectangle(0, 1, twinsFamily.Length * 30, 30).Contains(e.Location))
             {
@@ -527,7 +518,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
 
-            Cursor = expandButtonBounds.Contains(e.Location) || removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location) || conditionsLabelBounds.Contains(e.Location)
+            Cursor = expandButtonBounds.Contains(e.Location) || removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location)
                 ? Cursors.Hand
                 : Cursors.Default;
             if (dynamicNameTextboxBounds.Contains(e.Location))
@@ -622,12 +613,18 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         public static EditorItem Create(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor)
         {
-            if (type.Type == JtNodeType.Bool) return new BoolEditorItem(type, token, eventManager, jsonJtfEditor);
-            if (type.Type == JtNodeType.String) return new StringEditorItem(type, token, eventManager, jsonJtfEditor);
-            if (type.Type.IsNumericType) return new NumberEditorItem(type, token, eventManager, jsonJtfEditor);
-            if (type.Type == JtNodeType.Enum) return new EnumEditorItem(type, token, eventManager, jsonJtfEditor);
-            if (type.Type == JtNodeType.Block) return new BlockEditorItem(type, token, eventManager, jsonJtfEditor);
-            if (type.Type == JtNodeType.Array) return new ArrayEditorItem(type, token, eventManager, jsonJtfEditor);
+            if (type.Type == JtNodeType.Bool)
+                return new BoolEditorItem(type, token, eventManager, jsonJtfEditor);
+            if (type.Type == JtNodeType.String)
+                return new StringEditorItem(type, token, eventManager, jsonJtfEditor);
+            if (type.Type.IsNumericType)
+                return new NumberEditorItem(type, token, eventManager, jsonJtfEditor);
+            if (type.Type == JtNodeType.Enum)
+                return new EnumEditorItem(type, token, eventManager, jsonJtfEditor);
+            if (type.Type == JtNodeType.Block)
+                return new BlockEditorItem(type, token, eventManager, jsonJtfEditor);
+            if (type.Type == JtNodeType.Array)
+                return new ArrayEditorItem(type, token, eventManager, jsonJtfEditor);
 
             throw new ArgumentOutOfRangeException(nameof(type));
         }

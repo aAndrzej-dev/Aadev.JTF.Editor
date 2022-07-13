@@ -94,6 +94,5 @@ namespace Aadev.JTF.Editor.EditorItems
                 Value = (bool?)Value is false;
             }
         }
-        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
     }
 }

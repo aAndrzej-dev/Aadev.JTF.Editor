@@ -116,7 +116,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (Value.Count() != Node.FixedSize)
                     msg = string.Format(Properties.Resources.ArrayInvalidElementsCount, Value.Count(), Node.FixedSize);
-                else msg = string.Format(Properties.Resources.ArrayElementsCount, Value.Count().ToString());
+                else
+                    msg = string.Format(Properties.Resources.ArrayElementsCount, Value.Count().ToString());
             }
             else
             {
@@ -230,7 +231,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 focusControl?.Focus();
             }
-
+            if (e.Button != MouseButtons.Left)
+                return;
             if (addNewButtonBounds.Contains(e.Location))
             {
 
@@ -269,7 +271,6 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
 
-        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
 
         private void EnsureValue()
         {
@@ -350,7 +351,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.HeightChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
 
                 int oy = bei.Top + bei.Height + 5;
                 foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
@@ -366,11 +368,13 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.ValueChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
 
                 int ind = bei.ArrayIndex;
 
-                if (Value is not JArray array) return;
+                if (Value is not JArray array)
+                    return;
 
                 if (array.Count <= ind)
                 {
@@ -447,7 +451,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.HeightChanged += (sender, ev) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
                 int oy = bei.Top + bei.Height + 5;
                 foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
                 {
@@ -467,8 +472,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
             bei.ValueChanged += (sender, e) =>
             {
-                if (Value is not JObject obj) return;
-                if (sender is not EditorItem bei) return;
+                if (Value is not JObject obj)
+                    return;
+                if (sender is not EditorItem bei)
+                    return;
 
 
                 KeyValuePair<string, EditorItem>? keyValuePair = objectsArray.FirstOrDefault(x => x.Value == bei);

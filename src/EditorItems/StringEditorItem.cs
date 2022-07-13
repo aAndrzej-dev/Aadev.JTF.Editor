@@ -86,7 +86,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseMove(e);
         }
-        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
         private void CreateTextBox()
         {
             if (IsInvalidValueType)
@@ -108,6 +107,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 Text = RawValue
             };
+            if (Node.MaxLength >= 0)
+                textBox.MaxLength = Node.MaxLength;
+
+
 
 
 

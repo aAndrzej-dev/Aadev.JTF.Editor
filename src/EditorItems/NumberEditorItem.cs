@@ -13,7 +13,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private JValue _value = JValue.CreateNull();
         private Rectangle textBoxBounds = Rectangle.Empty;
 
-        protected override bool IsFocused => base.IsFocused  || textBox?.Focused is true;
+        protected override bool IsFocused => base.IsFocused || textBox?.Focused is true;
 
 
         private JValue? RawValue
@@ -108,7 +108,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
             CreateTextBox();
         }
-        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
 
         private void CreateTextBox()
         {
@@ -176,6 +175,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     if (BigInteger.TryParse(textBox?.Text, out BigInteger b))
                     {
                         Value = (int)BigInteger.Min(jtInt.Max, BigInteger.Max(jtInt.Min, b));
+
                     }
                     else
                     {
@@ -198,13 +198,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
                     if (float.TryParse(textBox.Text, out float b))
                         Value = MathF.Min(jtFloat.Max, MathF.Max(jtFloat.Min, b));
-                    else textBox.Undo();
+                    else
+                        textBox.Undo();
                 }
                 else if (Node is JtDouble jtDouble)
                 {
                     if (double.TryParse(textBox.Text, out double b))
                         Value = Math.Min(jtDouble.Max, Math.Max(jtDouble.Min, b));
-                    else textBox.Undo();
+                    else
+                        textBox.Undo();
                 }
 
 

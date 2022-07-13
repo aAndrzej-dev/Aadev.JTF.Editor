@@ -37,7 +37,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 else
                     return new JtEnum.EnumValue();
 
-
+ 
             }
 
             set => _value = new JValue(value.Name);
@@ -55,7 +55,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        protected override bool IsFocused => base.IsFocused  || comboBox?.Focused is true || comboBox?.DroppedDown is true;
+        protected override bool IsFocused => base.IsFocused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (string?)Value != Node.Default);
         internal EnumEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
 
@@ -142,7 +142,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
             comboBox.Location = new Point(xOffset + 10, 16 - comboBox.Height / 2 - 4);
-            comboBox.Width = Width - xOffset - 20 - xRightOffset;
+            comboBox.Width = Width - xOffset - 12 - xRightOffset;
             comboBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             if (Node.AllowCustomValues)
             {
@@ -219,6 +219,5 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseClick(e);
         }
-        protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
     }
 }

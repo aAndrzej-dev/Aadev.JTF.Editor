@@ -16,6 +16,4 @@ namespace Aadev.JTF.Editor
         public override Color ToolStripDropDownBackground => Color.FromArgb(80, 80, 80);
         public override Color MenuItemSelected => Color.FromArgb(100, 100, 100);
     }
-
-
 }
