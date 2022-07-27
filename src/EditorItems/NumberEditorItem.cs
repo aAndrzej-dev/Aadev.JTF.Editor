@@ -56,7 +56,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal NumberEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
+        internal NumberEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor) { }
 
 
 
@@ -145,7 +145,7 @@ namespace Aadev.JTF.Editor.EditorItems
             textBox.Focus();
             textBox.SelectAll();
 
-            textBox.LostFocus += (s, e) =>
+            textBox.TextChanged += (s, e) =>
             {
 
                 if (Node is JtByte jtByte)
@@ -210,11 +210,14 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
 
 
+
+            };
+            textBox.LostFocus += (sender, e) =>
+            {
                 Controls.Remove(textBox);
                 textBox = null;
                 Invalidate();
             };
-
         }
     }
 }

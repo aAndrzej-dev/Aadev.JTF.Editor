@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	 <TargetFramework>net5.0-windows</TargetFramework>
+	 <TargetFramework>net6.0-windows</TargetFramework>
 	 <UseWindowsForms>true</UseWindowsForms>
 	<RootNamespace>Aadev.JTF.Editor</RootNamespace>
 	<AssemblyName>Aadev.JTF.Editor</AssemblyName>
@@ -13,12 +13,11 @@
 	<DebugType>none</DebugType>
 	<AssemblyVersion>1.1.0.0</AssemblyVersion>
 	<FileVersion>1.1.0.0</FileVersion>
-	<Version>1.1.0-rc1</Version>
+	<Version>1.1.0-rc2</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Icons have been updated
-Bug fixes and performance improvements
+    <PackageReleaseNotes>Bug fixes and performance improvements
 
 Unsupported JTF Features:
 - Fixed size arrays
@@ -30,8 +29,14 @@ Unsupported JTF Features:
 
   <ItemGroup>
     <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0-beta4" />
-    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc1" />
+    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc2" />
   </ItemGroup>
+
+
+
+
+
+
 
 
 

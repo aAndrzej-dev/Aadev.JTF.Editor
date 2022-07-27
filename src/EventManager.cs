@@ -1,4 +1,5 @@
 ﻿using Aadev.JTF.Editor.EditorItems;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,18 +9,19 @@ namespace Aadev.JTF.Editor
     internal class EventManager
     {
         private readonly List<ChangedEvent> chnagedEvents = new();
-        public bool RegistryEvent(EditorItem editorItem, object? value)
+        public static EventManager CreateEventManager(IIdentifiersManager identifiersManager)
         {
-            if (chnagedEvents.Any(x => x.Id == editorItem.Node.Id))
+            return new EventManager(identifiersManager);
+        }
+        private EventManager(IIdentifiersManager identifiersManager)
+        {
+            foreach (JtNode? item in identifiersManager.GetRegisteredNodes())
             {
-                return false;
+                chnagedEvents.Add(new ChangedEvent(item.Id!));
             }
-
-            chnagedEvents.Add(new ChangedEvent(editorItem, value));
-            return true;
         }
 
-        public bool InvokeEvent(string id, object? value)
+        public bool InvokeEvent(string id, JToken? value)
         {
             if (chnagedEvents.FirstOrDefault(x => x.Id == id) is not ChangedEvent ce)
             {
@@ -33,26 +35,22 @@ namespace Aadev.JTF.Editor
     }
     internal class ChangedEvent
     {
-        private object? value;
-        public string Id => EditorItem.Node.Id!;
-        public EditorItem EditorItem { get; }
-        public object? Value { get => value; set { this.value = value; Event?.Invoke(this, new ChangedEventArgs(this.value)); } }
+        private JToken? value;
+        public string Id { get; }
+        public JToken? Value { get => value; set { this.value = value; Event?.Invoke(this, new ChangedEventArgs(this.value)); } }
         public event ChangedValueEventHandler? Event;
 
-        public ChangedEvent(EditorItem editorItem, object? value)
+        public ChangedEvent(string id)
         {
-            EditorItem = editorItem;
-            if (EditorItem.Node.Id is null)
-                throw new Exception("Editor item must have id in events");
-            Value = value;
+            Id = id;
         }
-        public void Invoke(object? value) => Value = value;
+        public void Invoke(JToken? value) => Value = value;
     }
     internal class ChangedEventArgs : EventArgs
     {
-        public object? Value { get; }
+        public JToken? Value { get; }
 
-        public ChangedEventArgs(object? value)
+        public ChangedEventArgs(JToken? value)
         {
             Value = value;
         }

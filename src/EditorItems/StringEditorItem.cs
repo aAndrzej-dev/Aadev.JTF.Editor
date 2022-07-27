@@ -35,7 +35,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (string?)Value != Node.Default);
-        internal StringEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
+        internal StringEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor) { }
 
 
         protected override void OnPaint(PaintEventArgs e)

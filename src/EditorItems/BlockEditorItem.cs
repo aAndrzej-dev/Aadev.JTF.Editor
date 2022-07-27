@@ -3,8 +3,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor.EditorItems
@@ -44,7 +42,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && RawValue.Count > 0);
 
-        internal BlockEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor)
+        internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor)
         {
             SetStyle(ControlStyles.ContainerControl, true);
 
@@ -178,13 +176,26 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private int UpdateLayout(EditorItem bei)
         {
+            int yOffset = Node.IsRoot ? 10 : 38;
+            foreach (Control ctr in Controls)
+            {
+                ctr.Top = yOffset;
+                yOffset += ctr.Height;
+                if (ctr.Height != 0)
+                {
+                    yOffset += 5;
+                }
+            }
+            y = yOffset + 10;
+            return y;
+
             int oy = bei.Top + bei.Height + 5;
             if (bei.Height == 0)
             {
                 oy = bei.Top;
             }
 
-            foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
+            foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top))
             {
                 control.Top = oy;
                 oy += control.Height;
@@ -196,17 +207,19 @@ namespace Aadev.JTF.Editor.EditorItems
             y = oy + 10;
             return y;
         }
-        private (int, EditorItem) CreateEditorItem(JtNode type, int y, bool resizeOnCreate = false)
+        private (int, EditorItem) CreateEditorItem(JtNode type, int y, bool resizeOnCreate = false, int insertIndex = -1)
         {
             EditorItem bei;
+
+
             if (resizeOnCreate)
             {
                 RawValue[type.Name!] = null;
-                bei = Create(type, null, EventManager, RootEditor);
+                bei = Create(type, null, RootEditor);
             }
             else
             {
-                bei = Create(type, RawValue[type.Name!], EventManager, RootEditor);
+                bei = Create(type, RawValue[type.Name!], RootEditor);
             }
 
 
@@ -218,8 +231,16 @@ namespace Aadev.JTF.Editor.EditorItems
                 RawValue[type.Name!] = bei.Value;
             }
 
-            bei.CreateEventHandlers();
             Controls.Add(bei);
+            if (insertIndex >= 0)
+            {
+                Controls.SetChildIndex(bei, insertIndex);
+            }
+
+
+
+
+
             if (resizeOnCreate)
             {
                 y = UpdateLayout(bei);
@@ -253,10 +274,12 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (sender is not EditorItem bei)
                     return;
+
+                int index = Controls.IndexOf(bei);
                 Controls.Remove(bei);
 
 
-                (_, EditorItem newei) = CreateEditorItem(e.NewTwinNode!, bei.Top, true);
+                (_, EditorItem newei) = CreateEditorItem(e.NewTwinNode!, bei.Top, true, index);
 
                 newei.TabIndex = bei.TabIndex;
 
@@ -267,14 +290,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
             return (y, bei);
-        }
-        internal override void CreateEventHandlers()
-        {
-            base.CreateEventHandlers();
-            foreach (EditorItem item in Controls.Cast<Control>().Where(x => x is EditorItem))
-            {
-                item.CreateEventHandlers();
-            }
         }
         protected override void OnMouseClick(MouseEventArgs e)
         {

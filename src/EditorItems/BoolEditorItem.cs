@@ -30,7 +30,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private new JtBool Node => (JtBool)base.Node;
 
-        internal BoolEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor) { }
+        internal BoolEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor) { }
 
         protected override void OnPaint(PaintEventArgs e)
         {

@@ -32,7 +32,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         internal override bool IsSaveable => Node.Required || Value.Type != JTokenType.Null;
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-        internal ArrayEditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor) : base(type, token, eventManager, jsonJtfEditor)
+        internal ArrayEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor)
         {
             SetStyle(ControlStyles.ContainerControl, true);
             if (Node.Prefabs.Count <= 1)
@@ -333,14 +333,13 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateArrayItem(int index, JtNode prefab, JToken? itemValue = null, bool focus = false)
         {
-            EditorItem bei = Create(prefab, itemValue, new EventManager(), RootEditor);
+            EditorItem bei = Create(prefab, itemValue, RootEditor);
 
             JArray value = (JArray)Value;
 
 
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
-            bei.CreateEventHandlers();
 
             bei.ArrayIndex = index;
             if (itemValue is null)
@@ -419,12 +418,11 @@ namespace Aadev.JTF.Editor.EditorItems
         private void CreateObjectItem(JProperty? item = null)
         {
             JtNode? type = Node.Prefabs[Node.DefaultPrefabIndex];
-            EditorItem bei = Create(type, null, new EventManager(), RootEditor);
+            EditorItem bei = Create(type, null, RootEditor);
 
 
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
-            bei.CreateEventHandlers();
 
 
 
@@ -525,14 +523,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
         }
 
-        internal override void CreateEventHandlers()
-        {
-            base.CreateEventHandlers();
-            foreach (EditorItem item in Controls)
-            {
-                item.CreateEventHandlers();
-            }
-        }
     }
 
 }

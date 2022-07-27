@@ -4,7 +4,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -28,6 +27,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
         private Rectangle nameLabelBounds = Rectangle.Empty;
         private Rectangle twinFamilyButtonBounds;
+        private EventManager eventManager;
 
 
 
@@ -35,7 +35,6 @@ namespace Aadev.JTF.Editor.EditorItems
         protected int xRightOffset = 0;
         protected int yOffset = 0;
         protected int innerHeight = 0;
-        protected bool HaveEventHandlersBeenCreated { get; private set; }
         protected JsonJtfEditor RootEditor { get; }
 
 
@@ -45,11 +44,9 @@ namespace Aadev.JTF.Editor.EditorItems
         internal event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
         internal event EventHandler? HeightChanged;
 
-
         internal int ArrayIndex { get; set; } = -1;
         public abstract JToken Value { get; set; }
         public JtNode Node { get; }
-        public EventManager EventManager { get; }
         protected bool CanCollapse => Node is JtArray or JtBlock && Parent is not JsonJtfEditor;
         internal abstract bool IsSaveable { get; }
 
@@ -66,11 +63,12 @@ namespace Aadev.JTF.Editor.EditorItems
 
         }
 
-        protected internal EditorItem(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor rootEditor)
+        protected internal EditorItem(JtNode type, JToken? token, JsonJtfEditor rootEditor)
         {
             Node = type;
+            RootEditor = rootEditor;
             Value = token ?? ((Node.Required || Node.IsArrayPrefab) ? CreateValue() : JValue.CreateNull());
-            EventManager = eventManager;
+            eventManager = RootEditor.GetEventManager(Node.IdentifiersManager);
 
             twinsFamily = Node.GetTwinFamily();
 
@@ -86,10 +84,67 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Node.Id is not null)
             {
-                EventManager.RegistryEvent(this, Value);
-                ValueChanged += (s, ev) => EventManager.GetEvent(Node.Id)?.Invoke(Value);
+                ValueChanged += (s, ev) => eventManager.GetEvent(Node.Id)?.Invoke(Value);
+                eventManager.GetEvent(Node.Id)?.Invoke(Value);
             }
-            RootEditor = rootEditor;
+
+
+
+            if (Node.Condition is not null)
+            {
+                List<ChangedEvent?> vars = new List<ChangedEvent?>();
+
+
+                ConditionInterpreter? interpretor = new ConditionInterpreter(x =>
+                {
+                    ChangedEvent? e = eventManager.GetEvent(x);
+                    if (!vars.Contains(e))
+                        vars.Add(e);
+                    return e?.Value ?? JValue.CreateNull();
+                }, Node.Condition);
+
+
+
+                if (interpretor.ResolveCondition())
+                {
+                    Expanded = false;
+                    Height = 32;
+                    TabStop = true;
+                }
+                else
+                {
+                    Expanded = false;
+                    Height = 0;
+                    TabStop = false;
+                }
+                foreach (ChangedEvent? ce in vars)
+                {
+                    if (ce is null)
+                        continue;
+                    ce.Event += (s, ev) =>
+                    {
+
+                        if (interpretor.ResolveCondition())
+                        {
+                            Expanded = false;
+                            Height = 32;
+                            TabStop = true;
+                        }
+                        else
+                        {
+                            Expanded = false;
+                            Height = 0;
+                            TabStop = false;
+                        }
+                    };
+                }
+            }
+            else
+            {
+                Expanded = false;
+                Height = 32;
+                TabStop = true;
+            }
         }
 
         protected override void OnGotFocus(EventArgs e)
@@ -345,73 +400,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal virtual void CreateEventHandlers()
-        {
-            if (HaveEventHandlersBeenCreated)
-                return;
-
-            HaveEventHandlersBeenCreated = true;
-
-
-
-            if (Node.Condition is not null)
-            {
-
-                List<ChangedEvent?> vars = new List<ChangedEvent?>();
-
-
-                ConditionInterpreter? interpretor = new ConditionInterpreter(x =>
-                {
-                    ChangedEvent? e = EventManager.GetEvent(x);
-                    if (!vars.Contains(e))
-                        vars.Add(e);
-                    return e?.Value!;
-                }, Node.Condition);
-
- 
-
-                if (interpretor.ResolveCondition())
-                {
-                    Expanded = false;
-                    Height = 32;
-                    TabStop = true;
-                }
-                else
-                {
-                    Expanded = false;
-                    Height = 0;
-                    TabStop = false;
-                }
-                foreach (ChangedEvent? ce in vars)
-                {
-                    if (ce is null)
-                        continue;
-                    ce.Event += (s, ev) =>
-                    {
-
-                        if (interpretor.ResolveCondition())
-                        {
-                            Expanded = false;
-                            Height = 32;
-                            TabStop = true;
-                        }
-                        else
-                        {
-                            Expanded = false;
-                            Height = 0;
-                            TabStop = false;
-                        }
-                    };
-                }
-            }
-            else
-            {
-                Expanded = false;
-                Height = 32;
-                TabStop = true;
-            }
-        }
-
 
         protected override void OnMouseClick(MouseEventArgs e)
         {
@@ -611,20 +599,20 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }));
         }
-        public static EditorItem Create(JtNode type, JToken? token, EventManager eventManager, JsonJtfEditor jsonJtfEditor)
+        public static EditorItem Create(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor)
         {
             if (type.Type == JtNodeType.Bool)
-                return new BoolEditorItem(type, token, eventManager, jsonJtfEditor);
+                return new BoolEditorItem(type, token, jsonJtfEditor);
             if (type.Type == JtNodeType.String)
-                return new StringEditorItem(type, token, eventManager, jsonJtfEditor);
+                return new StringEditorItem(type, token, jsonJtfEditor);
             if (type.Type.IsNumericType)
-                return new NumberEditorItem(type, token, eventManager, jsonJtfEditor);
+                return new NumberEditorItem(type, token, jsonJtfEditor);
             if (type.Type == JtNodeType.Enum)
-                return new EnumEditorItem(type, token, eventManager, jsonJtfEditor);
+                return new EnumEditorItem(type, token, jsonJtfEditor);
             if (type.Type == JtNodeType.Block)
-                return new BlockEditorItem(type, token, eventManager, jsonJtfEditor);
+                return new BlockEditorItem(type, token, jsonJtfEditor);
             if (type.Type == JtNodeType.Array)
-                return new ArrayEditorItem(type, token, eventManager, jsonJtfEditor);
+                return new ArrayEditorItem(type, token, jsonJtfEditor);
 
             throw new ArgumentOutOfRangeException(nameof(type));
         }

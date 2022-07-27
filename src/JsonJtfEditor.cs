@@ -1,6 +1,7 @@
 ﻿using Aadev.JTF.Editor.EditorItems;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 
@@ -11,15 +12,16 @@ namespace Aadev.JTF.Editor
         private JTemplate? template;
         private JToken? Root;
         private string? filename;
-        private EventManager? eventManager;
         internal static readonly ToolTip toolTip = new ToolTip() { BackColor = System.Drawing.Color.FromArgb(80, 80, 80), ForeColor = System.Drawing.Color.White, ShowAlways = true, Active = false };
 
         public event EventHandler? ValueChanged;
 
 
+        private readonly Dictionary<IIdentifiersManager, EventManager> identifiersEventManagersMap = new Dictionary<IIdentifiersManager, EventManager>();
 
         public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
         public string? Filename { get => filename; set { filename = value; OnTemplateChanged(); } }
+
 
 
 
@@ -28,6 +30,16 @@ namespace Aadev.JTF.Editor
             InitializeComponent();
         }
 
+        internal EventManager GetEventManager(IIdentifiersManager identifiersManager)
+        {
+            if (identifiersEventManagersMap.ContainsKey(identifiersManager))
+                return identifiersEventManagersMap[identifiersManager];
+            EventManager? em = EventManager.CreateEventManager(identifiersManager);
+
+            identifiersEventManagersMap.Add(identifiersManager, em);
+
+            return em;
+        }
 
 
         private void OnTemplateChanged()
@@ -45,18 +57,17 @@ namespace Aadev.JTF.Editor
                 Root = template.Root.CreateDefaultValue();
             }
 
-            eventManager = new EventManager();
-
-            EditorItem bei = EditorItem.Create(template.Root, Root, eventManager, this);
+            EditorItem bei = EditorItem.Create(template.Root, Root, this);
 
             bei.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
             bei.Location = new System.Drawing.Point(10, 10);
             bei.Width = Width - 20;
-            bei.CreateEventHandlers();
+            //bei.CreateEventHandlers();
             Controls.Add(bei);
             bei.ValueChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei) return;
+                if (sender is not EditorItem bei)
+                    return;
 
                 Root = bei.Value;
 
