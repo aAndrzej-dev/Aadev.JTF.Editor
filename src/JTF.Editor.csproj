@@ -13,11 +13,11 @@
 	<DebugType>none</DebugType>
 	<AssemblyVersion>1.1.0.0</AssemblyVersion>
 	<FileVersion>1.1.0.0</FileVersion>
-	<Version>1.1.0-rc2</Version>
+	<Version>1.1.0-rc3</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Bug fixes and performance improvements
+    <PackageReleaseNotes>Bug fixes and improvements
 
 Unsupported JTF Features:
 - Fixed size arrays

@@ -45,9 +45,6 @@ namespace Aadev.JTF.Editor.EditorItems
         internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor)
         {
             SetStyle(ControlStyles.ContainerControl, true);
-
-
-
         }
 
 
@@ -62,8 +59,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 Height = 32;
                 if (Node.IsDynamicName)
                     Controls.Remove(focusControl);
-                focusControl = null;
                 Controls.Clear();
+                focusControl = null;
                 base.OnExpandChanged();
                 ResumeLayout();
                 return;
@@ -127,7 +124,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Node.IsDynamicName)
                 index++;
-
             foreach (JtNode item in Node.Children)
             {
 
@@ -167,18 +163,20 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }
 
+
+
             Height = y + 5;
-
-
-
             ResumeLayout();
             base.OnExpandChanged();
         }
-        private int UpdateLayout(EditorItem bei)
+        private void UpdateLayout()
         {
+            SuspendLayout();
             int yOffset = Node.IsRoot ? 10 : 38;
             foreach (Control ctr in Controls)
             {
+                if (ctr is not EditorItem)
+                    continue;
                 ctr.Top = yOffset;
                 yOffset += ctr.Height;
                 if (ctr.Height != 0)
@@ -187,25 +185,10 @@ namespace Aadev.JTF.Editor.EditorItems
                 }
             }
             y = yOffset + 10;
-            return y;
-
-            int oy = bei.Top + bei.Height + 5;
-            if (bei.Height == 0)
-            {
-                oy = bei.Top;
-            }
-
-            foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top))
-            {
-                control.Top = oy;
-                oy += control.Height;
-                if (control.Height != 0)
-                {
-                    oy += 5;
-                }
-            }
-            y = oy + 10;
-            return y;
+            if (!Expanded)
+                y = 32;
+            Height = y;
+            ResumeLayout();
         }
         private (int, EditorItem) CreateEditorItem(JtNode type, int y, bool resizeOnCreate = false, int insertIndex = -1)
         {
@@ -243,17 +226,9 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (resizeOnCreate)
             {
-                y = UpdateLayout(bei);
-                Height = y;
+                UpdateLayout();
             }
-            bei.HeightChanged += (sender, e) =>
-            {
-                if (sender is not EditorItem bei)
-                    return;
-                y = UpdateLayout(bei);
-                Height = y;
-
-            };
+            bei.HeightChanged += (sender, e) => UpdateLayout();
             bei.ValueChanged += (sender, e) =>
             {
                 if (sender is not EditorItem bei)
@@ -291,6 +266,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             return (y, bei);
         }
+
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);

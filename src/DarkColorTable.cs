@@ -3,7 +3,6 @@ using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor
 {
-
     internal class DarkColorTable : ProfessionalColorTable
     {
         public override Color MenuBorder => Color.FromArgb(30, 30, 30);

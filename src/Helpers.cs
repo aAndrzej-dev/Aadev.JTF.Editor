@@ -15,6 +15,6 @@ namespace Aadev.JTF.Editor
             return null;
         }
 
-        public delegate void ControlDelegate();
+        internal delegate void ControlDelegate();
     }
 }

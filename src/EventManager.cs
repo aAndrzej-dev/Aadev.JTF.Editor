@@ -1,44 +1,37 @@
-﻿using Aadev.JTF.Editor.EditorItems;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Aadev.JTF.Editor
 {
     internal class EventManager
     {
-        private readonly List<ChangedEvent> chnagedEvents = new();
-        public static EventManager CreateEventManager(IIdentifiersManager identifiersManager)
+        private readonly ChangedEvent[] changedEvents;
+        public EventManager(IIdentifiersManager identifiersManager)
         {
-            return new EventManager(identifiersManager);
-        }
-        private EventManager(IIdentifiersManager identifiersManager)
-        {
-            foreach (JtNode? item in identifiersManager.GetRegisteredNodes())
+            JtNode[] array = identifiersManager.GetRegisteredNodes();
+            changedEvents = new ChangedEvent[array.Length];
+            for (int i = 0; i < array.Length; i++)
             {
-                chnagedEvents.Add(new ChangedEvent(item.Id!));
+                JtNode? item = array[i];
+                changedEvents[i] = new ChangedEvent(item.Id!);
             }
         }
-
-        public bool InvokeEvent(string id, JToken? value)
+        public ChangedEvent? GetEvent(string id)
         {
-            if (chnagedEvents.FirstOrDefault(x => x.Id == id) is not ChangedEvent ce)
+            foreach (ChangedEvent? item in changedEvents)
             {
-                return false;
+                if (item.Id == id)
+                    return item;
             }
-
-            ce.Invoke(value);
-            return true;
+            return null;
         }
-        public ChangedEvent? GetEvent(string id) => chnagedEvents.FirstOrDefault(x => x.Id == id);
     }
     internal class ChangedEvent
     {
         private JToken? value;
         public string Id { get; }
-        public JToken? Value { get => value; set { this.value = value; Event?.Invoke(this, new ChangedEventArgs(this.value)); } }
-        public event ChangedValueEventHandler? Event;
+        public JToken? Value { get => value; set { this.value = value; Event?.Invoke(this, EventArgs.Empty); } }
+        public event EventHandler? Event;
 
         public ChangedEvent(string id)
         {
@@ -46,15 +39,4 @@ namespace Aadev.JTF.Editor
         }
         public void Invoke(JToken? value) => Value = value;
     }
-    internal class ChangedEventArgs : EventArgs
-    {
-        public JToken? Value { get; }
-
-        public ChangedEventArgs(JToken? value)
-        {
-            Value = value;
-        }
-    }
-
-    internal delegate void ChangedValueEventHandler(object? sender, ChangedEventArgs e);
 }

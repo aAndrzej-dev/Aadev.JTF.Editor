@@ -271,7 +271,6 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnMouseMove(e);
         }
 
-
         private void EnsureValue()
         {
             if (Value.Type != Node.JsonType)
@@ -522,7 +521,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
         }
-
     }
 
 }

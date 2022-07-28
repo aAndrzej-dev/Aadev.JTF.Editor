@@ -27,7 +27,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
         private Rectangle nameLabelBounds = Rectangle.Empty;
         private Rectangle twinFamilyButtonBounds;
-        private EventManager eventManager;
+        private readonly EventManager eventManager;
 
 
 
@@ -35,9 +35,11 @@ namespace Aadev.JTF.Editor.EditorItems
         protected int xRightOffset = 0;
         protected int yOffset = 0;
         protected int innerHeight = 0;
+
+        //protected bool HaveEventHandlersBeenCreated { get; private set; }
         protected JsonJtfEditor RootEditor { get; }
 
-
+        internal bool SuspendFocus { get; private set; }
 
         public event EventHandler? ValueChanged;
         public event EventHandler? DynamicNameChanged;
@@ -50,9 +52,8 @@ namespace Aadev.JTF.Editor.EditorItems
         protected bool CanCollapse => Node is JtArray or JtBlock && Parent is not JsonJtfEditor;
         internal abstract bool IsSaveable { get; }
 
-
         public string? DynamicName { get => dynamicName; set { dynamicName = value; Invalidate(); } }
-        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; OnExpandChanged(); } }
+        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; SuspendFocus = true; OnExpandChanged(); SuspendFocus = false; } }
 
         protected JToken CreateValue() => Value = Node.CreateDefaultValue();
         protected void OnValueChanged() => ValueChanged?.Invoke(this, EventArgs.Empty);
@@ -60,7 +61,6 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             Focus();
             Invalidate();
-
         }
 
         protected internal EditorItem(JtNode type, JToken? token, JsonJtfEditor rootEditor)
@@ -68,6 +68,8 @@ namespace Aadev.JTF.Editor.EditorItems
             Node = type;
             RootEditor = rootEditor;
             Value = token ?? ((Node.Required || Node.IsArrayPrefab) ? CreateValue() : JValue.CreateNull());
+
+
             eventManager = RootEditor.GetEventManager(Node.IdentifiersManager);
 
             twinsFamily = Node.GetTwinFamily();
@@ -92,14 +94,16 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Node.Condition is not null)
             {
-                List<ChangedEvent?> vars = new List<ChangedEvent?>();
+                Dictionary<string, ChangedEvent?> vars = new Dictionary<string, ChangedEvent?>();
 
 
                 ConditionInterpreter? interpretor = new ConditionInterpreter(x =>
                 {
-                    ChangedEvent? e = eventManager.GetEvent(x);
-                    if (!vars.Contains(e))
-                        vars.Add(e);
+                    string? id = x.ToLower();
+                    if (vars.ContainsKey(id))
+                        return vars[id]!.Value ?? JValue.CreateNull();
+                    ChangedEvent? e = eventManager.GetEvent(id);
+                    vars.Add(id, e);
                     return e?.Value ?? JValue.CreateNull();
                 }, Node.Condition);
 
@@ -117,11 +121,11 @@ namespace Aadev.JTF.Editor.EditorItems
                     Height = 0;
                     TabStop = false;
                 }
-                foreach (ChangedEvent? ce in vars)
+                foreach (KeyValuePair<string, ChangedEvent?> ce in vars)
                 {
-                    if (ce is null)
+                    if (ce.Value is null)
                         continue;
-                    ce.Event += (s, ev) =>
+                    ce.Value.Event += (sender, e) =>
                     {
 
                         if (interpretor.ResolveCondition())
@@ -400,16 +404,19 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
-            Focus();
-            if (e.Button != MouseButtons.Left)
-                return;
+
+
             if (expandButtonBounds.Contains(e.Location))
             {
                 Expanded = !Expanded;
+                return;
+            }
+            if (e.Button != MouseButtons.Left)
+            {
+                Focus();
                 return;
             }
             if (removeButtonBounds.Contains(e.Location))
@@ -521,6 +528,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 return;
             }
+            if (SuspendFocus)
+                return;
 
             txtDynamicName = new TextBox
             {

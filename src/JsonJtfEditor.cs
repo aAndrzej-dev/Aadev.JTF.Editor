@@ -34,7 +34,7 @@ namespace Aadev.JTF.Editor
         {
             if (identifiersEventManagersMap.ContainsKey(identifiersManager))
                 return identifiersEventManagersMap[identifiersManager];
-            EventManager? em = EventManager.CreateEventManager(identifiersManager);
+            EventManager? em = new EventManager(identifiersManager);
 
             identifiersEventManagersMap.Add(identifiersManager, em);
 
@@ -62,7 +62,6 @@ namespace Aadev.JTF.Editor
             bei.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
             bei.Location = new System.Drawing.Point(10, 10);
             bei.Width = Width - 20;
-            //bei.CreateEventHandlers();
             Controls.Add(bei);
             bei.ValueChanged += (sender, e) =>
             {

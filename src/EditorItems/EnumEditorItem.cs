@@ -129,6 +129,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             if (comboBox is not null)
                 return;
+            if (Parent is EditorItem ei && ei.SuspendFocus)
+                return;
 
 
             comboBox = new ComboBox
@@ -219,6 +221,5 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             base.OnMouseClick(e);
         }
-        //protected override JToken CreateValue() => Value = Node.CreateDefaultValue();
     }
 }
