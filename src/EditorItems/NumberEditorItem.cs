@@ -56,7 +56,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal NumberEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor) { }
+        internal NumberEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager) { }
 
 
 

@@ -13,7 +13,7 @@
 	<DebugType>none</DebugType>
 	<AssemblyVersion>1.1.0.0</AssemblyVersion>
 	<FileVersion>1.1.0.0</FileVersion>
-	<Version>1.1.0-rc3</Version>
+	<Version>1.1.0-rc4</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -29,7 +29,7 @@ Unsupported JTF Features:
 
   <ItemGroup>
     <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0-beta4" />
-    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc2" />
+    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc3" />
   </ItemGroup>
 
 

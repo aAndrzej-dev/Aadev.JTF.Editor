@@ -41,10 +41,19 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
 
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && RawValue.Count > 0);
-
-        internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor)
+        private readonly EventManager childrenEventManager;
+        internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager)
         {
             SetStyle(ControlStyles.ContainerControl, true);
+
+            if (Node.CustomValueSource is not null)
+            {
+                childrenEventManager = new EventManager(Node.CustomValueSource.IdentifiersManager);
+            }
+            else if (Node.IsInArrayPrefab)
+            {
+                childrenEventManager = this.eventManager!;
+            }
         }
 
 
@@ -177,7 +186,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (ctr is not EditorItem)
                     continue;
-                ctr.Top = yOffset;
+                if(ctr.Top != yOffset)
+                    ctr.Top = yOffset;
                 yOffset += ctr.Height;
                 if (ctr.Height != 0)
                 {
@@ -194,15 +204,14 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             EditorItem bei;
 
-
             if (resizeOnCreate)
             {
                 RawValue[type.Name!] = null;
-                bei = Create(type, null, RootEditor);
+                bei = Create(type, null, RootEditor, childrenEventManager);
             }
             else
             {
-                bei = Create(type, RawValue[type.Name!], RootEditor);
+                bei = Create(type, RawValue[type.Name!], RootEditor, childrenEventManager);
             }
 
 

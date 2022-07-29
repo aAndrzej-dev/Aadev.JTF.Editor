@@ -27,7 +27,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
         private Rectangle nameLabelBounds = Rectangle.Empty;
         private Rectangle twinFamilyButtonBounds;
-        private readonly EventManager eventManager;
+        protected readonly EventManager eventManager;
 
 
 
@@ -36,7 +36,6 @@ namespace Aadev.JTF.Editor.EditorItems
         protected int yOffset = 0;
         protected int innerHeight = 0;
 
-        //protected bool HaveEventHandlersBeenCreated { get; private set; }
         protected JsonJtfEditor RootEditor { get; }
 
         internal bool SuspendFocus { get; private set; }
@@ -63,14 +62,17 @@ namespace Aadev.JTF.Editor.EditorItems
             Invalidate();
         }
 
-        protected internal EditorItem(JtNode type, JToken? token, JsonJtfEditor rootEditor)
+        protected internal EditorItem(JtNode type, JToken? token, JsonJtfEditor rootEditor, EventManager? eventManager = null)
         {
             Node = type;
             RootEditor = rootEditor;
             Value = token ?? ((Node.Required || Node.IsArrayPrefab) ? CreateValue() : JValue.CreateNull());
-
-
-            eventManager = RootEditor.GetEventManager(Node.IdentifiersManager);
+            if (eventManager is not null)
+                this.eventManager = eventManager;
+            else if (Node.IsInArrayPrefab || (Node.IsExternal && !Node.HasExternalSources))
+                this.eventManager = new EventManager(Node.IdentifiersManager);
+            else
+                this.eventManager = RootEditor.GetEventManager(Node.IdentifiersManager);
 
             twinsFamily = Node.GetTwinFamily();
 
@@ -86,8 +88,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Node.Id is not null)
             {
-                ValueChanged += (s, ev) => eventManager.GetEvent(Node.Id)?.Invoke(Value);
-                eventManager.GetEvent(Node.Id)?.Invoke(Value);
+                ValueChanged += (s, ev) => this.eventManager.GetEvent(Node.Id)?.Invoke(Value);
+                this.eventManager.GetEvent(Node.Id)?.Invoke(Value);
             }
 
 
@@ -102,7 +104,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     string? id = x.ToLower();
                     if (vars.ContainsKey(id))
                         return vars[id]!.Value ?? JValue.CreateNull();
-                    ChangedEvent? e = eventManager.GetEvent(id);
+                    ChangedEvent? e = this.eventManager.GetEvent(id);
                     vars.Add(id, e);
                     return e?.Value ?? JValue.CreateNull();
                 }, Node.Condition);
@@ -608,20 +610,20 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }));
         }
-        public static EditorItem Create(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor)
+        public static EditorItem Create(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null)
         {
             if (type.Type == JtNodeType.Bool)
-                return new BoolEditorItem(type, token, jsonJtfEditor);
+                return new BoolEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type == JtNodeType.String)
-                return new StringEditorItem(type, token, jsonJtfEditor);
+                return new StringEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type.IsNumericType)
-                return new NumberEditorItem(type, token, jsonJtfEditor);
+                return new NumberEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type == JtNodeType.Enum)
-                return new EnumEditorItem(type, token, jsonJtfEditor);
+                return new EnumEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type == JtNodeType.Block)
-                return new BlockEditorItem(type, token, jsonJtfEditor);
+                return new BlockEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type == JtNodeType.Array)
-                return new ArrayEditorItem(type, token, jsonJtfEditor);
+                return new ArrayEditorItem(type, token, jsonJtfEditor, eventManager);
 
             throw new ArgumentOutOfRangeException(nameof(type));
         }

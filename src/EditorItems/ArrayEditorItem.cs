@@ -32,7 +32,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         internal override bool IsSaveable => Node.Required || Value.Type != JTokenType.Null;
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-        internal ArrayEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor)
+        internal ArrayEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager)
         {
             SetStyle(ControlStyles.ContainerControl, true);
             if (Node.Prefabs.Count <= 1)
@@ -330,9 +330,11 @@ namespace Aadev.JTF.Editor.EditorItems
                 Height = y;
             }
         }
+
         private void CreateArrayItem(int index, JtNode prefab, JToken? itemValue = null, bool focus = false)
         {
-            EditorItem bei = Create(prefab, itemValue, RootEditor);
+            EditorItem bei = Create(prefab, itemValue, RootEditor, new EventManager(prefab.IdentifiersManager));
+
 
             JArray value = (JArray)Value;
 
@@ -416,8 +418,8 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateObjectItem(JProperty? item = null)
         {
-            JtNode? type = Node.Prefabs[Node.DefaultPrefabIndex];
-            EditorItem bei = Create(type, null, RootEditor);
+            JtNode? prefab = Node.Prefabs[Node.DefaultPrefabIndex];
+            EditorItem bei = Create(prefab, null, RootEditor, new EventManager(prefab.IdentifiersManager));
 
 
             bei.Location = new Point(10, y);

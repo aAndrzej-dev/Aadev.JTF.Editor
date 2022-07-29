@@ -36,8 +36,6 @@ namespace Aadev.JTF.Editor.EditorItems
                     return Node.Values.FirstOrNull(x => x.Name == Node.Default) ?? new JtEnum.EnumValue();
                 else
                     return new JtEnum.EnumValue();
-
-
             }
 
             set => _value = new JValue(value.Name);
@@ -57,7 +55,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
         protected override bool IsFocused => base.IsFocused || comboBox?.Focused is true || comboBox?.DroppedDown is true;
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (string?)Value != Node.Default);
-        internal EnumEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor) : base(type, token, jsonJtfEditor) { }
+        internal EnumEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager) { }
 
 
 
