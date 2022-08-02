@@ -10,12 +10,15 @@ namespace Aadev.JTF.Editor
     public partial class JsonJtfEditor : UserControl
     {
         private JTemplate? template;
-        private JToken? Root;
+        private JToken? root;
         private string? filename;
+        private Func<string, object?>? getDynamicSource;
         internal static readonly ToolTip toolTip = new ToolTip() { BackColor = System.Drawing.Color.FromArgb(80, 80, 80), ForeColor = System.Drawing.Color.White, ShowAlways = true, Active = false };
 
         public event EventHandler? ValueChanged;
 
+
+        public Func<string, object?>? GetDynamicSource { get => getDynamicSource; set { getDynamicSource = value; OnTemplateChanged(); } }
 
         private readonly Dictionary<IIdentifiersManager, EventManager> identifiersEventManagersMap = new Dictionary<IIdentifiersManager, EventManager>();
 
@@ -50,14 +53,14 @@ namespace Aadev.JTF.Editor
             }
             try
             {
-                Root = JToken.Parse(File.ReadAllText(Filename));
+                root = JToken.Parse(File.ReadAllText(Filename));
             }
             catch
             {
-                Root = template.Root.CreateDefaultValue();
+                root = template.Root.CreateDefaultValue();
             }
 
-            EditorItem bei = EditorItem.Create(template.Root, Root, this);
+            EditorItem bei = EditorItem.Create(template.Root, root, this);
 
             bei.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
             bei.Location = new System.Drawing.Point(10, 10);
@@ -68,7 +71,7 @@ namespace Aadev.JTF.Editor
                 if (sender is not EditorItem bei)
                     return;
 
-                Root = bei.Value;
+                root = bei.Value;
 
                 ValueChanged?.Invoke(sender, e);
             };
@@ -79,6 +82,6 @@ namespace Aadev.JTF.Editor
                 bei.Left = 0;
             }
         }
-        public void Save(Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(Filename!, Root!.ToString(formatting));
+        public void Save(Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(Filename!, root!.ToString(formatting));
     }
 }

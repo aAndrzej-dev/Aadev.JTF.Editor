@@ -11,7 +11,7 @@ namespace Aadev.JTF.Editor.EditorItems
     {
         private int y;
         private FocusableControl? focusControl;
-        private JToken _value = JValue.CreateNull();
+        private JToken value = JValue.CreateNull();
 
         private new JtBlock Node => (JtBlock)base.Node;
 
@@ -20,19 +20,19 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             get
             {
-                if (_value is not JObject)
-                    _value = new JObject();
-                return (JObject)_value;
+                if (value is not JObject)
+                    value = new JObject();
+                return (JObject)value;
             }
 
-            set => _value = value is null ? _value : value;
+            set => this.value = value is null ? this.value : value;
         }
         public override JToken Value
         {
-            get => _value;
+            get => value;
             set
             {
-                _value = value;
+                this.value = value;
                 Invalidate();
                 OnValueChanged();
             }
@@ -41,7 +41,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
 
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && RawValue.Count > 0);
-        private readonly EventManager childrenEventManager;
+        private readonly EventManager? childrenEventManager;
         internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager)
         {
             SetStyle(ControlStyles.ContainerControl, true);

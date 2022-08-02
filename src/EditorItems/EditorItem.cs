@@ -11,7 +11,7 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal abstract partial class EditorItem : UserControl
     {
-        protected static Pen WhitePen = new Pen(Color.White);
+        protected static Pen whitePen = new Pen(Color.White);
         protected virtual bool IsFocused => Focused || txtDynamicName?.Focused is true;
         protected bool IsInvalidValueType => Value.Type is not JTokenType.Null && (Value.Type != Node.JsonType);
 
@@ -311,8 +311,8 @@ namespace Aadev.JTF.Editor.EditorItems
             removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
             g.FillRectangle(new SolidBrush(Color.Red), removeButtonBounds);
 
-            g.DrawLine(WhitePen, Width - 20, 12, Width - 12, 20);
-            g.DrawLine(WhitePen, Width - 12, 12, Width - 20, 20);
+            g.DrawLine(whitePen, Width - 20, 12, Width - 12, 20);
+            g.DrawLine(whitePen, Width - 12, 12, Width - 20, 20);
 
             xRightOffset += 30;
         }
@@ -371,15 +371,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-            g.DrawRectangle(WhitePen, xOffset + 7, 8, 16, 16);
+            g.DrawRectangle(whitePen, xOffset + 7, 8, 16, 16);
             if (Expanded)
             {
-                g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
+                g.DrawLine(whitePen, xOffset + 12, 16, xOffset + 18, 16);
             }
             else
             {
-                g.DrawLine(WhitePen, xOffset + 12, 16, xOffset + 18, 16);
-                g.DrawLine(WhitePen, xOffset + 15, 12, xOffset + 15, 20);
+                g.DrawLine(whitePen, xOffset + 12, 16, xOffset + 18, 16);
+                g.DrawLine(whitePen, xOffset + 15, 12, xOffset + 15, 20);
             }
             xOffset += 30;
         }
@@ -614,12 +614,8 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             if (type.Type == JtNodeType.Bool)
                 return new BoolEditorItem(type, token, jsonJtfEditor, eventManager);
-            if (type.Type == JtNodeType.String)
-                return new StringEditorItem(type, token, jsonJtfEditor, eventManager);
-            if (type.Type.IsNumericType)
-                return new NumberEditorItem(type, token, jsonJtfEditor, eventManager);
-            if (type.Type == JtNodeType.Enum)
-                return new EnumEditorItem(type, token, jsonJtfEditor, eventManager);
+            if (type.Type == JtNodeType.String || type.Type.IsNumericType)
+                return new ValueEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type == JtNodeType.Block)
                 return new BlockEditorItem(type, token, jsonJtfEditor, eventManager);
             if (type.Type == JtNodeType.Array)

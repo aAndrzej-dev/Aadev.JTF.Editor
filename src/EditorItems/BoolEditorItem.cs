@@ -7,22 +7,22 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal sealed class BoolEditorItem : EditorItem
     {
-        private JToken _value = JValue.CreateNull();
+        private JToken value = JValue.CreateNull();
         private Rectangle falsePanelRect = Rectangle.Empty;
         private Rectangle truePanelRect = Rectangle.Empty;
 
         internal override bool IsSaveable => Node.Required || (Value.Type != JTokenType.Null && (bool?)Value != Node.Default);
         private bool? RawValue
         {
-            get => _value.Type == Node.JsonType ? ((bool?)_value ?? Node.Default) : (_value.Type is JTokenType.Null ? Node.Default : null);
-            set => _value = new JValue(value);
+            get => value.Type == Node.JsonType ? ((bool?)value ?? Node.Default) : (value.Type is JTokenType.Null ? Node.Default : null);
+            set => this.value = new JValue(value);
         }
         public override JToken Value
         {
-            get => _value;
+            get => value;
             set
             {
-                _value = value;
+                this.value = value;
                 Invalidate();
                 OnValueChanged();
             }

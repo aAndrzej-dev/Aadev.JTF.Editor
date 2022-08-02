@@ -11,7 +11,7 @@ namespace Aadev.JTF.Editor.EditorItems
     internal partial class ArrayEditorItem : EditorItem
     {
         private Rectangle addNewButtonBounds = Rectangle.Empty;
-        private JToken _value = JValue.CreateNull();
+        private JToken value = JValue.CreateNull();
         private int y;
         private FocusableControl? focusControl;
         private readonly Dictionary<string, EditorItem> objectsArray = new();
@@ -22,10 +22,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
         public override JToken Value
         {
-            get => _value;
+            get => value;
             set
             {
-                _value = value;
+                this.value = value;
                 Invalidate();
                 OnValueChanged();
             }
@@ -104,8 +104,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 addNewButtonBounds = new Rectangle(Width - 30 - xRightOffset, yOffset, 30, innerHeight);
                 g.FillRectangle(new SolidBrush(Color.Green), addNewButtonBounds);
-                g.DrawLine(WhitePen, Width - 30 - xRightOffset + 15, 8, Width - 30 - xRightOffset + 15, 24);
-                g.DrawLine(WhitePen, Width - 30 - xRightOffset + 7, 16, Width - 30 - xRightOffset + 23, 16);
+                g.DrawLine(whitePen, Width - 30 - xRightOffset + 15, 8, Width - 30 - xRightOffset + 15, 24);
+                g.DrawLine(whitePen, Width - 30 - xRightOffset + 7, 16, Width - 30 - xRightOffset + 23, 16);
                 xRightOffset += 30;
             }
 

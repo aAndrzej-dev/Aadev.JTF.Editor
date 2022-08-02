@@ -13,15 +13,14 @@
 	<DebugType>none</DebugType>
 	<AssemblyVersion>1.1.0.0</AssemblyVersion>
 	<FileVersion>1.1.0.0</FileVersion>
-	<Version>1.1.0-rc4</Version>
+	<Version>1.1.0-rc5</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>Bug fixes and improvements
 
 Unsupported JTF Features:
-- Fixed size arrays
-- Display name in enum values</PackageReleaseNotes>
+- Fixed size arrays</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
@@ -29,16 +28,8 @@ Unsupported JTF Features:
 
   <ItemGroup>
     <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0-beta4" />
-    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc3" />
+    <PackageReference Include="Aadev.JTF" Version="1.1.0-rc4" />
   </ItemGroup>
-
-
-
-
-
-
-
-
 
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

@@ -93,16 +93,6 @@ namespace Aadev.JTF.Editor.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap _enum {
-            get {
-                object obj = ResourceManager.GetObject("enum", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap _float {
             get {
                 object obj = ResourceManager.GetObject("float", resourceCulture);
