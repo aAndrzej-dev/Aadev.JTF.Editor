@@ -10,10 +10,9 @@ namespace Aadev.JTF.Editor
     public partial class JsonJtfEditor : UserControl
     {
         private JTemplate? template;
-        private JToken? root;
-        private string? filename;
+        private EditorItem? rootEditorItem;
         private Func<string, object?>? getDynamicSource;
-        internal static readonly ToolTip toolTip = new ToolTip() { BackColor = System.Drawing.Color.FromArgb(80, 80, 80), ForeColor = System.Drawing.Color.White, ShowAlways = true, Active = false };
+        private JToken? value;
 
         public event EventHandler? ValueChanged;
 
@@ -23,14 +22,26 @@ namespace Aadev.JTF.Editor
         private readonly Dictionary<IIdentifiersManager, EventManager> identifiersEventManagersMap = new Dictionary<IIdentifiersManager, EventManager>();
 
         public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
-        public string? Filename { get => filename; set { filename = value; OnTemplateChanged(); } }
+        public JToken? Value { get => value; set { this.value = value; OnTemplateChanged(); } }
 
 
 
+
+
+
+        internal ToolTip ToolTip { get; }
 
         public JsonJtfEditor()
         {
             InitializeComponent();
+            ToolTip = new ToolTip()
+            {
+                BackColor = System.Drawing.Color.FromArgb(80, 80, 80),
+                ForeColor = System.Drawing.Color.White,
+                ShowAlways = true,
+                Active = false
+
+            };
         }
 
         internal EventManager GetEventManager(IIdentifiersManager identifiersManager)
@@ -47,41 +58,35 @@ namespace Aadev.JTF.Editor
 
         private void OnTemplateChanged()
         {
-            if (template is null || string.IsNullOrEmpty(Filename))
+            if (template is null)
             {
                 return;
             }
-            try
-            {
-                root = JToken.Parse(File.ReadAllText(Filename));
-            }
-            catch
-            {
-                root = template.Root.CreateDefaultValue();
-            }
 
-            EditorItem bei = EditorItem.Create(template.Root, root, this);
+            rootEditorItem = EditorItem.Create(template.Root, value, this);
 
-            bei.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
-            bei.Location = new System.Drawing.Point(10, 10);
-            bei.Width = Width - 20;
-            Controls.Add(bei);
-            bei.ValueChanged += (sender, e) =>
+            rootEditorItem.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
+            rootEditorItem.Location = new System.Drawing.Point(10, 10);
+            rootEditorItem.Width = Width - 20;
+            Controls.Add(rootEditorItem);
+            rootEditorItem.ValueChanged += (sender, e) =>
             {
                 if (sender is not EditorItem bei)
                     return;
 
-                root = bei.Value;
+                value = bei.Value;
 
                 ValueChanged?.Invoke(sender, e);
             };
-            if (bei is BlockEditorItem)
+            if (rootEditorItem is BlockEditorItem && !rootEditorItem.IsInvalidValueType)
             {
-                bei.Width = Width;
-                bei.Top = 0;
-                bei.Left = 0;
+                rootEditorItem.Width = Width;
+                rootEditorItem.Top = 0;
+                rootEditorItem.Left = 0;
             }
         }
-        public void Save(Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(Filename!, root!.ToString(formatting));
+        public void Save(string filename, Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(filename!, value!.ToString(formatting));
+
+
     }
 }
