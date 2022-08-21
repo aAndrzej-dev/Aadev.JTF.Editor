@@ -85,13 +85,16 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (value is not JValue jv)
                     throw new Exception();
-                this.value = jv;
-                Invalidate();
-                OnValueChanged();
+                if (!JToken.DeepEquals(this.value, jv))
+                {
+                    this.value = jv;
+                    Invalidate();
+                    OnValueChanged();
+                }
             }
         }
 
-        internal ValueEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager)
+        internal ValueEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
         {
             if (Node.Type.IsNumericType && token is null)
                 value = (JValue)Node.CreateDefaultValue();

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -16,6 +17,7 @@ namespace Aadev.JTF.Editor.EditorItems
         internal static readonly SolidBrush yellowBrush = new SolidBrush(Color.Yellow);
         internal static readonly SolidBrush redBrush = new SolidBrush(Color.Red);
         internal static readonly SolidBrush whiteBrush = new SolidBrush(Color.White);
+        internal static readonly SolidBrush lightGrayBrush = new SolidBrush(Color.LightGray);
         internal static readonly SolidBrush goldBrush = new SolidBrush(Color.Gold);
         internal static readonly SolidBrush greenBrush = new SolidBrush(Color.Green);
         internal static readonly SolidBrush royalBlueBrush = new SolidBrush(Color.RoyalBlue);
@@ -62,7 +64,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         internal int ArrayIndex { get; set; } = -1;
-        internal virtual bool IsSaveable => Node.Required || Node.Parent is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array };
+        internal virtual bool IsSaveable => Node.Required || Node.Parent is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array } || Node.IsRoot;
         internal bool SuspendFocus { get; private set; }
 
         public JtNode Node { get; }
@@ -74,19 +76,16 @@ namespace Aadev.JTF.Editor.EditorItems
         internal event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
         internal event EventHandler? HeightChanged;
 
-        protected internal EditorItem(JtNode type, JToken? token, JsonJtfEditor rootEditor, EventManager? eventManager = null)
+        protected internal EditorItem(JtNode type, JToken? token, JsonJtfEditor rootEditor, IEventManagerProvider eventManagerProvider)
         {
             Node = type;
             RootEditor = rootEditor;
-            Value = token ?? ((Node.Required || Node.IsArrayPrefab) ? CreateValue() : JValue.CreateNull());
-            if (eventManager is not null)
-                this.eventManager = eventManager;
-            else if (Node.IsInArrayPrefab || (Node.IsExternal && !Node.HasExternalSources))
-                this.eventManager = new EventManager(Node.IdentifiersManager);
+            if (token is null || token.Type is JTokenType.Null)
+                Value = IsSaveable ? CreateValue() : JValue.CreateNull();
             else
-                this.eventManager = RootEditor.GetEventManager(Node.IdentifiersManager);
-
-            twinsFamily = Node.GetTwinFamily();
+                Value = token;
+            eventManager = eventManagerProvider.GetEventManager(Node.IdentifiersManager);
+            twinsFamily = RootEditor.NormalizeTwinNodeOrder ? Node.GetTwinFamily().OrderBy(x => x.Type.Id).ToArray() : Node.GetTwinFamily();
 
             InitializeComponent();
             ForeColorBrush = new SolidBrush(ForeColor);
@@ -101,8 +100,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Node.Id is not null)
             {
-                ValueChanged += (s, ev) => this.eventManager.GetEvent(Node.Id)?.Invoke(Value);
-                this.eventManager.GetEvent(Node.Id)?.Invoke(Value);
+                ValueChanged += (s, ev) => eventManager.GetEvent(Node.Id)?.Invoke(Value);
+                eventManager.GetEvent(Node.Id)?.Invoke(Value);
             }
 
             StringBuilder sb = new StringBuilder();
@@ -126,7 +125,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     string? id = x.ToLower();
                     if (vars.ContainsKey(id))
                         return vars[id]!.Value ?? JValue.CreateNull();
-                    ChangedEvent? e = this.eventManager.GetEvent(id);
+                    ChangedEvent? e = eventManager.GetEvent(id);
                     if (e is null)
                         return JValue.CreateNull();
                     vars.Add(id, e);
@@ -356,9 +355,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 SizeF nameSize = g.MeasureString(dn, Font);
 
-
-                g.DrawString(dn, Font, ForeColorBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
-                
+                g.DrawString(dn, Font, IsSaveable ? ForeColorBrush : lightGrayBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
                 xOffset += (int)nameSize.Width;
 
 
@@ -616,13 +613,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (new Rectangle(0, 1, twinsFamily.Length * 30, 30).Contains(e.Location))
             {
-
-
-                JtNode? newType = twinsFamily[(e.Location.X - 1) / 30];
+                JtNode newType = twinsFamily[(e.Location.X - 1) / 30];
 
                 if (newType == Node)
                     return;
-                TwinTypeChanged?.Invoke(this, new TwinChangedEventArgs() { NewTwinNode = newType });
+                TwinTypeChanged?.Invoke(this, new TwinChangedEventArgs(newType));
 
                 return;
 
@@ -723,17 +718,17 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }));
         }
-        public static EditorItem Create(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null)
+        public static EditorItem Create(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider)
         {
             if (type.Type == JtNodeType.Bool)
-                return new BoolEditorItem(type, token, jsonJtfEditor, eventManager);
+                return new BoolEditorItem(type, token, jsonJtfEditor, eventManagerProvider);
             if (type.Type == JtNodeType.String || type.Type.IsNumericType)
-                return new ValueEditorItem(type, token, jsonJtfEditor, eventManager);
+                return new ValueEditorItem(type, token, jsonJtfEditor, eventManagerProvider);
             if (type.Type == JtNodeType.Block)
-                return new BlockEditorItem(type, token, jsonJtfEditor, eventManager);
+                return new BlockEditorItem(type, token, jsonJtfEditor, eventManagerProvider);
             if (type.Type == JtNodeType.Array)
-                return new ArrayEditorItem(type, token, jsonJtfEditor, eventManager);
-            
+                return new ArrayEditorItem(type, token, jsonJtfEditor, eventManagerProvider);
+
             throw new ArgumentOutOfRangeException(nameof(type));
         }
 

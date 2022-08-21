@@ -22,15 +22,18 @@ namespace Aadev.JTF.Editor.EditorItems
             get => value;
             set
             {
-                this.value = value;
-                Invalidate();
-                OnValueChanged();
+                if (!JToken.DeepEquals(this.value, value))
+                {
+                    this.value = value;
+                    Invalidate();
+                    OnValueChanged();
+                }
             }
         }
 
         private new JtBool Node => (JtBool)base.Node;
 
-        internal BoolEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager) { }
+        internal BoolEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider) { }
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);

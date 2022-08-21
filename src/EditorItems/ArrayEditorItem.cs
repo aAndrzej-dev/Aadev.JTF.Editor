@@ -33,7 +33,7 @@ namespace Aadev.JTF.Editor.EditorItems
         internal override bool IsSaveable => base.IsSaveable || (Value.Type != JTokenType.Null && ((JContainer)Value).Count > 0);
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
 
-        internal ArrayEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager)
+        internal ArrayEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
         {
             SetStyle(ControlStyles.ContainerControl, true);
 
@@ -79,14 +79,14 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
             Expanded = true;
-            y -= 5;
+            y -= 10;
             EnsureValue();
             if (Node.MakeAsObject)
                 CreateObjectItem(prefab);
             else
                 CreateArrayItem(((JArray)Value).Count, prefab, null, true);
 
-            y += 5;
+            y += 10;
             Height = y;
 
             OnValueChanged();
@@ -121,39 +121,35 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }
 
-            y = oy;
+            Height = y = oy + 10;
             ResumeLayout();
         }
         private void LoadAsArray()
         {
-
-            JArray array = (JArray)Value;
-
-            for (int i = 0; i < array.Count; i++)
+            if (Value is not JArray jArray)
             {
-                CreateArrayItem(i, Node.Prefabs.FirstOrDefault(x => x.JsonType == array[i].Type) ?? Node.Prefabs[0], array[i]);
+                return;
             }
-            y += 5;
-            if (Expanded)
+            for (int i = 0; i < jArray.Count; i++)
             {
-                Height = y;
+                CreateArrayItem(i, Node.Prefabs.FirstOrDefault(x => x.JsonType == jArray[i].Type) ?? Node.Prefabs[0], jArray[i]);
             }
+            
         }
         private void LoadAsObject()
         {
-            foreach (JProperty item in ((JObject)Value).Properties())
+            if (Value is not JObject jObject)
+            {
+                return;
+            }
+            foreach (JProperty item in jObject.Properties())
             {
                 CreateObjectItem(Node.Prefabs.FirstOrDefault(x => x.JsonType == item.Value.Type) ?? Node.Prefabs[0], item);
-            }
-            y += 5;
-            if (Expanded)
-            {
-                Height = y;
             }
         }
         private void CreateArrayItem(int index, JtNode prefab, JToken? itemValue = null, bool focus = false)
         {
-            EditorItem bei = Create(prefab, itemValue, RootEditor, new EventManager(prefab.IdentifiersManager));
+            EditorItem bei = Create(prefab, itemValue, RootEditor, new BlankEventManagerProvider());
 
 
             JArray value = (JArray)Value;
@@ -173,7 +169,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (sender is not EditorItem bei)
                     return;
-
+                SuspendLayout();
                 int oy = bei.Top + bei.Height + 5;
                 foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
                 {
@@ -181,8 +177,8 @@ namespace Aadev.JTF.Editor.EditorItems
                     oy += control.Height;
                     oy += 5;
                 }
-                y = oy;
-                Height = y;
+                Height = y = oy + 10;
+                ResumeLayout();
             };
 
 
@@ -225,8 +221,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void CreateObjectItem(JtNode prefab, JProperty? item = null)
         {
-            EditorItem bei = Create(prefab, null, RootEditor, new EventManager(prefab.IdentifiersManager));
-
+            EditorItem bei = Create(prefab, null, RootEditor, new BlankEventManagerProvider());
 
             bei.Location = new Point(10, y);
             bei.Width = Width - 20;
@@ -258,6 +253,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (sender is not EditorItem bei)
                     return;
+                SuspendLayout();
                 int oy = bei.Top + bei.Height + 5;
                 foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
                 {
@@ -265,8 +261,8 @@ namespace Aadev.JTF.Editor.EditorItems
                     oy += control.Height;
                     oy += 5;
                 }
-                y = oy;
-                Height = y;
+                Height = y = oy + 10;
+                ResumeLayout();
             };
             if (item is not null)
             {
@@ -351,8 +347,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             OnValueChanged();
             UpdateLayout(editorItem);
-            y += 5;
-            Height = y;
         }
 
 
@@ -445,12 +439,18 @@ namespace Aadev.JTF.Editor.EditorItems
 
             y = 38;
 
-            EnsureValue();
+
 
             if (Node.MakeAsObject)
                 LoadAsObject();
             else
                 LoadAsArray();
+
+            y += 10;
+            if (Expanded)
+            {
+                Height = y;
+            }
 
 
             base.OnExpandChanged();
@@ -486,7 +486,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     return;
                 }
                 Expanded = true;
-                y -= 5;
+                y -= 10;
 
                 EnsureValue();
                 if (Node.MakeAsObject)
@@ -494,7 +494,35 @@ namespace Aadev.JTF.Editor.EditorItems
                 else
                     CreateArrayItem(((JArray)Value).Count, Node.Prefabs[0], null, true);
 
-                y += 5;
+                y += 10;
+                Height = y;
+
+                OnValueChanged();
+            }
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if(e.KeyCode == Keys.N && e.Control)
+            {
+                if (Node.Prefabs.Count == 0)
+                    return;
+                if (Node.Prefabs.Count > 1)
+                {
+                    cmsPrefabSelect!.Show(MousePosition);
+                    return;
+                }
+                Expanded = true;
+                y -= 10;
+
+                EnsureValue();
+                if (Node.MakeAsObject)
+                    CreateObjectItem(Node.Prefabs[0]);
+                else
+                    CreateArrayItem(((JArray)Value).Count, Node.Prefabs[0], null, true);
+
+                y += 10;
                 Height = y;
 
                 OnValueChanged();

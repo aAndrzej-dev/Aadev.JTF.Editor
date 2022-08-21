@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor
 {
-    public partial class JsonJtfEditor : UserControl
+    public partial class JsonJtfEditor : UserControl, IEventManagerProvider
     {
         private JTemplate? template;
         private EditorItem? rootEditorItem;
@@ -27,6 +27,7 @@ namespace Aadev.JTF.Editor
 
 
 
+        public bool NormalizeTwinNodeOrder { get; set; }
 
 
         internal ToolTip ToolTip { get; }
@@ -58,12 +59,12 @@ namespace Aadev.JTF.Editor
 
         private void OnTemplateChanged()
         {
-            if (template is null)
+            if (template is null || Value is null)
             {
                 return;
             }
 
-            rootEditorItem = EditorItem.Create(template.Root, value, this);
+            rootEditorItem = EditorItem.Create(template.Root, value, this, this);
 
             rootEditorItem.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
             rootEditorItem.Location = new System.Drawing.Point(10, 10);
@@ -78,6 +79,7 @@ namespace Aadev.JTF.Editor
 
                 ValueChanged?.Invoke(sender, e);
             };
+            value = rootEditorItem.Value;
             if (rootEditorItem is BlockEditorItem && !rootEditorItem.IsInvalidValueType)
             {
                 rootEditorItem.Width = Width;
@@ -86,7 +88,6 @@ namespace Aadev.JTF.Editor
             }
         }
         public void Save(string filename, Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(filename!, value!.ToString(formatting));
-
-
+        EventManager IEventManagerProvider.GetEventManager(IIdentifiersManager identifiersManager) => GetEventManager(identifiersManager);
     }
 }

@@ -12,7 +12,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private int y;
         private FocusableControl? focusControl;
         private JToken value = JValue.CreateNull();
-        private readonly EventManager? childrenEventManager;
+        private readonly IEventManagerProvider childrenEventManagerProvider;
 
         private new JtBlock Node => (JtBlock)base.Node;
         private JContainer RawValue
@@ -40,17 +40,17 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
         internal override bool IsSaveable => base.IsSaveable || (Value.Type != JTokenType.Null && RawValue.Count > 0);
 
-        internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager? eventManager = null) : base(type, token, jsonJtfEditor, eventManager)
+        internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
         {
             SetStyle(ControlStyles.ContainerControl, true);
 
-            if (Node.CustomValueSource is not null)
+            if (Node.Children.CustomSourceId is not null)
             {
-                childrenEventManager = new EventManager(Node.CustomValueSource.IdentifiersManager);
+                childrenEventManagerProvider = new BlankEventManagerProvider();
             }
-            else if (Node.IsInArrayPrefab)
+            else
             {
-                childrenEventManager = this.eventManager!;
+                childrenEventManagerProvider = eventManagerProvider;
             }
         }
 
@@ -83,12 +83,12 @@ namespace Aadev.JTF.Editor.EditorItems
             if (resizeOnCreate)
             {
                 RawValue[type.Name!] = null;
-                bei = Create(type, null, RootEditor, childrenEventManager);
+                bei = Create(type, null, RootEditor, childrenEventManagerProvider);
             }
             else
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
-                    bei = Create(type, RawValue[type.Name!], RootEditor, childrenEventManager);
+                    bei = Create(type, RawValue[type.Name!], RootEditor, childrenEventManagerProvider);
                 else
                 {
                     JToken? value = null;
@@ -98,7 +98,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
 
-                    bei = Create(type, value, RootEditor, childrenEventManager);
+                    bei = Create(type, value, RootEditor, childrenEventManagerProvider);
                 }
             }
 
@@ -184,15 +184,26 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (sender is not EditorItem bei)
                     return;
-
+                SuspendLayout();
                 int index = Controls.IndexOf(bei);
                 Controls.Remove(bei);
 
-
-                (_, EditorItem newei) = CreateEditorItem(e.NewTwinNode!, bei.Top, true, index);
+                (_, EditorItem newei) = CreateEditorItem(e.NewTwinNode, bei.Top, true, index);
 
                 newei.TabIndex = bei.TabIndex;
 
+                if (Value is JObject jobject)
+                {
+                    if (jobject[bei.Node.Name!] is JToken)
+                    {
+                        jobject.Remove(bei.Node.Name!);
+                        OnValueChanged();
+                    }
+
+                }
+
+
+                ResumeLayout();
             };
             if (bei.Height != 0)
             {
