@@ -44,7 +44,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected int innerHeight = 0;
 
 
-        internal bool IsInvalidValueType => Value.Type is not JTokenType.Null && (Value.Type != Node.JsonType);
+        internal bool IsInvalidValueType => Value.Type != Node.JsonType;
         protected virtual bool IsFocused => Focused || txtDynamicName?.Focused is true;
         protected JsonJtfEditor RootEditor { get; }
         protected SolidBrush ForeColorBrush { get; private set; }
@@ -81,11 +81,11 @@ namespace Aadev.JTF.Editor.EditorItems
             Node = type;
             RootEditor = rootEditor;
             if (token is null || token.Type is JTokenType.Null)
-                Value = IsSaveable ? CreateValue() : JValue.CreateNull();
+                Value = Node.CreateDefaultValue();
             else
                 Value = token;
             eventManager = eventManagerProvider.GetEventManager(Node.IdentifiersManager);
-            twinsFamily = RootEditor.NormalizeTwinNodeOrder ? Node.GetTwinFamily().OrderBy(x => x.Type.Id).ToArray() : Node.GetTwinFamily();
+            twinsFamily = RootEditor.NormalizeTwinNodeOrder ? Node.GetTwinFamily().OrderBy(x => x.Type.Id).ToArray() : Node.GetTwinFamily().ToArray();
 
             InitializeComponent();
             ForeColorBrush = new SolidBrush(ForeColor);
@@ -170,7 +170,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 Expanded = false;
                 Height = 0;
                 TabStop = false;
-                Value = JValue.CreateNull();
+                Value = Node.CreateDefaultValue();
                 OnValueChanged();
             }
         }
@@ -320,7 +320,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
 
-            if (Expanded && !Node.IsDynamicName)
+            if (Expanded && !Node.IsDynamicName && Node is not JtArray)
             {
                 RectangleF bounds = new RectangleF(removeButtonBounds.Location, removeButtonBounds.Size);
                 g.SmoothingMode = SmoothingMode.HighQuality;
@@ -588,7 +588,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (Parent is not ArrayEditorItem parent)
                     throw new Exception();
 
-                parent.RemoverChild(this);
+                parent.RemoveChild(this);
 
 
                 return;

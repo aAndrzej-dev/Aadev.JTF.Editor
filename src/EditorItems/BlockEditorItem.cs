@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -11,21 +12,10 @@ namespace Aadev.JTF.Editor.EditorItems
     {
         private int y;
         private FocusableControl? focusControl;
-        private JToken value = JValue.CreateNull();
+        private JToken value;
         private readonly IEventManagerProvider childrenEventManagerProvider;
 
         private new JtBlock Node => (JtBlock)base.Node;
-        private JContainer RawValue
-        {
-            get
-            {
-                if (value is not JContainer)
-                    value = Node.CreateDefaultValue();
-                return (JContainer)value;
-            }
-
-            set => this.value = value is null ? this.value : value;
-        }
         public override JToken Value
         {
             get => value;
@@ -38,10 +28,15 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-        internal override bool IsSaveable => base.IsSaveable || (Value.Type != JTokenType.Null && RawValue.Count > 0);
+        internal override bool IsSaveable => base.IsSaveable || (!IsInvalidValueType && ValidValue.Count > 0);
 
+        public JContainer? ValidValue => Value as JContainer;
+        [MemberNotNullWhen(false, "ValidValue")] public new bool IsInvalidValueType => base.IsInvalidValueType;
         internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
         {
+            if (value is null)
+                value = (JContainer)Node.CreateDefaultValue();
+
             SetStyle(ControlStyles.ContainerControl, true);
 
             if (Node.Children.CustomSourceId is not null)
@@ -82,19 +77,19 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (resizeOnCreate)
             {
-                RawValue[type.Name!] = null;
+                value[type.Name!] = null;
                 bei = Create(type, null, RootEditor, childrenEventManagerProvider);
             }
             else
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
-                    bei = Create(type, RawValue[type.Name!], RootEditor, childrenEventManagerProvider);
+                    bei = Create(type, value[type.Name!], RootEditor, childrenEventManagerProvider);
                 else
                 {
                     JToken? value = null;
                     int index = type.Parent?.Children.IndexOf(type) ?? -1;
-                    if (index >= 0 && RawValue.Count > index)
-                        value = RawValue[index];
+                    if (index >= 0 && ValidValue!.Count > index)
+                        value = this.value[index];
 
 
 
@@ -109,19 +104,19 @@ namespace Aadev.JTF.Editor.EditorItems
             if (bei.IsSaveable)
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
-                    RawValue[type.Name!] = bei.Value;
+                    value[type.Name!] = bei.Value;
                 else
                 {
                     int index = type.Parent?.Children.IndexOf(type) ?? -1;
-                    if (RawValue.Count > index)
-                        RawValue[index] = bei.Value;
+                    if (ValidValue!.Count > index)
+                        value[index] = bei.Value;
                     else
                     {
-                        while (RawValue.Count < index)
+                        while (ValidValue.Count < index)
                         {
-                            RawValue.Add(JValue.CreateNull());
+                            ValidValue.Add(JValue.CreateNull());
                         }
-                        RawValue.Add(bei.Value);
+                        ValidValue.Add(bei.Value);
                     }
 
                 }
@@ -149,19 +144,19 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (bei.IsSaveable)
                 {
                     if (Node.ContainerJsonType is JtContainerType.Block)
-                        RawValue[type.Name!] = bei.Value;
+                        value[type.Name!] = bei.Value;
                     else
                     {
                         int index = type.Parent?.Children.IndexOf(type) ?? -1;
-                        if (RawValue.Count > index)
-                            RawValue[index] = bei.Value;
+                        if (ValidValue!.Count > index)
+                            value[index] = bei.Value;
                         else
                         {
-                            while (RawValue.Count < index)
+                            while (ValidValue.Count < index)
                             {
-                                RawValue.Add(JValue.CreateNull());
+                                ValidValue.Add(JValue.CreateNull());
                             }
-                            RawValue.Add(bei.Value);
+                            ValidValue.Add(bei.Value);
                         }
 
                     }
@@ -170,10 +165,10 @@ namespace Aadev.JTF.Editor.EditorItems
                 {
                     if (Node.ContainerJsonType is JtContainerType.Array)
                     {
-                        ((JArray)RawValue).Remove(bei.Value);
+                        ((JArray)value).Remove(bei.Value);
                     }
                     else
-                        ((JObject)RawValue).Remove(bei.Node.Name!);
+                        ((JObject)value).Remove(bei.Node.Name!);
 
                 }
 
@@ -290,7 +285,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (!jsonNodes.Contains(item.Name!))
                     jsonNodes.Add(item.Name!);
-                JtNode[]? twinFamily = item.GetTwinFamily();
+                JtNode[]? twinFamily = item.GetTwinFamily().ToArray();
+                
 
 
                 if (twinFamily.Length > 1)
@@ -300,27 +296,24 @@ namespace Aadev.JTF.Editor.EditorItems
                         continue;
                     }
 
-                    JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == RawValue[item.Name!]?.Type);
+                    JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == value[item.Name!]?.Type);
 
                     if (t is null)
                     {
-                        EditorItem ei2;
-                        (y, ei2) = CreateEditorItem(item, y);
+                        (y, EditorItem ei2) = CreateEditorItem(item, y);
                         ei2.TabIndex = index;
                         twins.Add(item.Name!);
                         index++;
 
                         continue;
                     }
-                    EditorItem ei3;
-                    (y, ei3) = CreateEditorItem(t, y);
+                    (y, EditorItem ei3) = CreateEditorItem(t, y);
                     ei3.TabIndex = index;
                     twins.Add(item.Name!);
                     index++;
                     continue;
                 }
-                EditorItem ei;
-                (y, ei) = CreateEditorItem(item, y);
+                (y, EditorItem ei) = CreateEditorItem(item, y);
                 ei.TabIndex = index;
                 index++;
 

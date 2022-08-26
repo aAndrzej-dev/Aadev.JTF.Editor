@@ -160,11 +160,11 @@ namespace Aadev.JTF.Editor.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} elements ({1} reguired).
+        ///   Looks up a localized string similar to {0} elements of {1}.
         /// </summary>
-        internal static string ArrayInvalidElementsCount {
+        internal static string ArrayElementsCountOfType {
             get {
-                return ResourceManager.GetString("ArrayInvalidElementsCount", resourceCulture);
+                return ResourceManager.GetString("ArrayElementsCountOfType", resourceCulture);
             }
         }
         
@@ -230,6 +230,15 @@ namespace Aadev.JTF.Editor.Properties {
             get {
                 object obj = ResourceManager.GetObject("None", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to View Value.
+        /// </summary>
+        internal static string ViewValue {
+            get {
+                return ResourceManager.GetString("ViewValue", resourceCulture);
             }
         }
     }

@@ -11,9 +11,9 @@
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
 	<DebugType>none</DebugType>
-	<AssemblyVersion>1.1.0.0</AssemblyVersion>
-	<FileVersion>1.1.0.0</FileVersion>
-	<Version>1.1.0</Version>
+	<AssemblyVersion>1.1.1.0</AssemblyVersion>
+	<FileVersion>1.1.1.0</FileVersion>
+	<Version>1.1.1</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -26,7 +26,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0" />
-    <PackageReference Include="Aadev.JTF" Version="1.1.0" />
+    <PackageReference Include="Aadev.JTF" Version="1.1.1" />
   </ItemGroup>
 
   <ItemGroup>

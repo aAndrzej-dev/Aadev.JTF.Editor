@@ -97,14 +97,14 @@ namespace Aadev.JTF.Editor.EditorItems
             g.DrawLine(EditorItem.whitePen, Width - 20, 12, Width - 12, 20);
             g.DrawLine(EditorItem.whitePen, Width - 12, 12, Width - 20, 20);
 
-            SizeF viewValueSize = g.MeasureString("View value", Font);
+            SizeF viewValueSize = g.MeasureString(Properties.Resources.ViewValue, Font);
 
             viewValueButtonBounds = new RectangleF(xOffset, 0, viewValueSize.Width + 20, 32);
 
             g.FillRectangle(EditorItem.redBrush, viewValueButtonBounds);
 
 
-            g.DrawString("View value", Font, EditorItem.whiteBrush, new PointF(xOffset + 10, 16 - viewValueSize.Height / 2));
+            g.DrawString(Properties.Resources.ViewValue, Font, EditorItem.whiteBrush, new PointF(xOffset + 10, 16 - viewValueSize.Height / 2));
             xOffset += (int)viewValueSize.Width;
 
 

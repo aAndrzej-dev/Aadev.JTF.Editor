@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Numerics;
 using System.Windows.Forms;
@@ -11,7 +12,7 @@ namespace Aadev.JTF.Editor.EditorItems
     internal sealed class ValueEditorItem : EditorItem
     {
         private Control? valueBox;
-        private JValue value = JValue.CreateNull();
+        private JToken value;
         private Rectangle textBoxBounds = Rectangle.Empty;
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
 
@@ -20,18 +21,18 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             get
             {
-                if (value is null || value.Type == JTokenType.Null)
+                if (value.Type == JTokenType.Null)
                     return false;
-
-
-
-
-
+                if (IsInvalidValueType)
+                    return false;
+                if (IsEqualToDefaultValue())
+                    return false;
+               
                 if (Node.Suggestions.Count == 0 && !(Node.Suggestions.CustomSourceId?.StartsWith("$") is true))
                     return false;
                 foreach (IJtSuggestion item in Node.Suggestions)
                 {
-                    if (SuggestionEqualJValue(item, value))
+                    if (SuggestionEqualJValue(item, ValidValue))
                         return false;
                 }
                 if (Node.Suggestions.CustomSourceId?.StartsWith("$") is true)
@@ -46,7 +47,7 @@ namespace Aadev.JTF.Editor.EditorItems
                             if (item is null || item.ValueType != Node.ValueType)
                                 continue;
                             empty = false;
-                            if (SuggestionEqualJValue(item, value))
+                            if (SuggestionEqualJValue(item, ValidValue))
                                 return false;
                         }
                         if (empty)
@@ -83,20 +84,20 @@ namespace Aadev.JTF.Editor.EditorItems
             get => value;
             set
             {
-                if (value is not JValue jv)
-                    throw new Exception();
-                if (!JToken.DeepEquals(this.value, jv))
+                if (!JToken.DeepEquals(this.value, value))
                 {
-                    this.value = jv;
+                    this.value = value;
                     Invalidate();
                     OnValueChanged();
                 }
             }
         }
+        public JValue? ValidValue => Value as JValue;
 
+        [MemberNotNullWhen(false, "ValidValue")] public new bool IsInvalidValueType => base.IsInvalidValueType;
         internal ValueEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
         {
-            if (Node.Type.IsNumericType && token is null)
+            if (value is null)
                 value = (JValue)Node.CreateDefaultValue();
 
         }
@@ -170,8 +171,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 Controls.Add(comboBox);
 
-                comboBox.Focus();
-                comboBox.DroppedDown = true;
 
                 if (Node.Suggestions.CustomSourceId?.StartsWith("$") is true)
                 {
@@ -197,8 +196,10 @@ namespace Aadev.JTF.Editor.EditorItems
                         comboBox.Items.Add(item);
                     }
                 }
+                comboBox.SelectedItem = ValidValue.Value;
 
-
+                comboBox.Focus();
+                comboBox.DroppedDown = true;
 
 
 
@@ -276,7 +277,7 @@ namespace Aadev.JTF.Editor.EditorItems
                         {
                             textBox.Text = Node.GetDefault().ToString();
                             textBox.SelectAll();
-                            value.Value = Node.GetDefault();
+                            ValidValue.Value = Node.GetDefault();
                             Invalidate();
                             OnValueChanged();
                             return;
@@ -386,11 +387,11 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (valueBox is null)
             {
-                if ((Node.Suggestions.Count > 0 || Node.Suggestions.CustomSourceId?.StartsWith('$') is true) && value.Value is not null)
+                if ((Node.Suggestions.Count > 0 || Node.Suggestions.CustomSourceId?.StartsWith('$') is true) && ValidValue.Value is not null)
                 {
                     foreach (IJtSuggestion item in Node.Suggestions)
                     {
-                        if (!SuggestionEqualJValue(item, value))
+                        if (!SuggestionEqualJValue(item, ValidValue))
                             continue;
 
                         SizeF s = e.Graphics.MeasureString(item.DisplayName, Font);
