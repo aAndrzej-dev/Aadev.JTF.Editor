@@ -28,14 +28,14 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (IsEqualToDefaultValue())
                     return false;
                
-                if (Node.Suggestions.Count == 0 && !(Node.Suggestions.CustomSourceId?.StartsWith("$") is true))
+                if (Node.Suggestions.Count == 0 && !(Node.Suggestions.CustomSourceId?.StartsWith('$') is true))
                     return false;
                 foreach (IJtSuggestion item in Node.Suggestions)
                 {
                     if (SuggestionEqualJValue(item, ValidValue))
                         return false;
                 }
-                if (Node.Suggestions.CustomSourceId?.StartsWith("$") is true)
+                if (Node.Suggestions.CustomSourceId?.StartsWith('$') is true)
                 {
                     string id = Node.Suggestions.CustomSourceId.AsSpan(1).ToString();
 
@@ -98,12 +98,14 @@ namespace Aadev.JTF.Editor.EditorItems
         internal ValueEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
         {
             if (value is null)
-                value = (JValue)Node.CreateDefaultValue();
+                value = Node.CreateDefaultValue();
 
         }
 
         private bool SuggestionEqualJValue(IJtSuggestion suggestion, JValue value)
         {
+            if (value.Type != Node.JsonType)
+                return false;
             return Node switch
             {
                 JtByte _ => suggestion.GetValue<byte>().Equals((byte)value),
@@ -118,6 +120,8 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private bool IsEqualToDefaultValue()
         {
+            if (value.Type != Node.JsonType)
+                return false;
             return Node switch
             {
                 JtByte jtByte => jtByte.Default.Equals((byte)value),
@@ -172,11 +176,9 @@ namespace Aadev.JTF.Editor.EditorItems
                 Controls.Add(comboBox);
 
 
-                if (Node.Suggestions.CustomSourceId?.StartsWith("$") is true)
+                if (Node.Suggestions.CustomSourceId?.StartsWith('$') is true)
                 {
-                    string id = Node.Suggestions.CustomSourceId.AsSpan(1).ToString();
-
-                    if (RootEditor.GetDynamicSource?.Invoke(id) is IEnumerable<IJtSuggestion> enumerable)
+                    if (RootEditor.GetDynamicSource?.Invoke(Node.Suggestions.CustomSourceId[1..]!) is IEnumerable<IJtSuggestion> enumerable)
                     {
                         foreach (IJtSuggestion item in enumerable)
                         {

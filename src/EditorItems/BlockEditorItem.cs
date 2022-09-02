@@ -362,6 +362,8 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnControlRemoved(ControlEventArgs e)
         {
             base.OnControlRemoved(e);
+            if (!Expanded)
+                return;
             OnValueChanged();
             UpdateLayout();
         }

@@ -423,7 +423,7 @@ namespace Aadev.JTF.Editor.EditorItems
             string msg;
 
             if(singlePrefab is null)
-                msg = string.Format(Properties.Resources.ArrayElementsCount, Node.MaxSize >= 0 ? $"{ValidValue.Count}/{Node.MaxSize}" : ValidValue.Count.ToString());
+             msg = string.Format(Properties.Resources.ArrayElementsCount, Node.MaxSize >= 0 ? $"{ValidValue.Count}/{Node.MaxSize}" : ValidValue.Count.ToString());
             else
                 msg = string.Format(Properties.Resources.ArrayElementsCountOfType, Node.MaxSize >= 0 ? $"{ValidValue.Count}/{Node.MaxSize}" : ValidValue.Count.ToString(), singlePrefab.Type.DisplayName);
 

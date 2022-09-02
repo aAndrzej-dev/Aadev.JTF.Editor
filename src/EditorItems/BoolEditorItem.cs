@@ -7,7 +7,7 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal sealed class BoolEditorItem : EditorItem
     {
-        private JToken value = JValue.CreateNull();
+        private JToken value;
         private Rectangle falsePanelRect = Rectangle.Empty;
         private Rectangle truePanelRect = Rectangle.Empty;
 
@@ -33,7 +33,10 @@ namespace Aadev.JTF.Editor.EditorItems
 
         private new JtBool Node => (JtBool)base.Node;
 
-        internal BoolEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider) { }
+        internal BoolEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider) 
+        {
+            value ??= Node.CreateDefaultValue();
+        }
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
