@@ -13,7 +13,6 @@ namespace Aadev.JTF.Editor.EditorItems
         private int y;
         private FocusableControl? focusControl;
         private JToken value;
-        private readonly IEventManagerProvider childrenEventManagerProvider;
 
         private new JtBlock Node => (JtBlock)base.Node;
         public override JToken Value
@@ -21,9 +20,10 @@ namespace Aadev.JTF.Editor.EditorItems
             get => value;
             set
             {
+                JToken oldValue = this.value;
                 this.value = value;
                 Invalidate();
-                OnValueChanged();
+                OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, value, this));
             }
         }
 
@@ -32,68 +32,72 @@ namespace Aadev.JTF.Editor.EditorItems
 
         public JContainer? ValidValue => Value as JContainer;
         [MemberNotNullWhen(false, "ValidValue")] public new bool IsInvalidValueType => base.IsInvalidValueType;
-        internal BlockEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider)
+
+        private bool suspendUpdatingLayout;
+
+        internal BlockEditorItem(JtBlock node, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(node, token, jsonJtfEditor, eventManager)
         {
-            if (value is null)
-                value = (JContainer)Node.CreateDefaultValue();
+            value ??= (JContainer)Node.CreateDefaultValue();
 
             SetStyle(ControlStyles.ContainerControl, true);
 
-            if (Node.Children.CustomSourceId is not null)
-            {
-                childrenEventManagerProvider = new BlankEventManagerProvider();
-            }
-            else
-            {
-                childrenEventManagerProvider = eventManagerProvider;
-            }
+            childrenEventManager = node.HasExternalChildren ? new EventManager(node.Children.GetIdentifiersManagerForChild(), eventManager) : eventManager;
         }
 
         private void UpdateLayout()
         {
+            if (suspendUpdatingLayout)
+                return;
+
+
             SuspendLayout();
-            int yOffset = Node.IsRoot ? 10 : 38;
+            int yOffset = (Node.IsRoot && Node.Template.Roots.Count == 1) ? 10 : 38;
             foreach (Control ctr in Controls)
             {
                 if (ctr is not IJsonItem)
                     continue;
                 if (ctr.Top != yOffset)
                     ctr.Top = yOffset;
-                yOffset += ctr.Height;
                 if (ctr.Height != 0)
                 {
-                    yOffset += 5;
+                    yOffset += ctr.Height + 5;
                 }
             }
             y = yOffset + 10;
             if (!Expanded)
                 y = 32;
             Height = y;
+
+
+
+
             ResumeLayout();
         }
-        private (int, EditorItem) CreateEditorItem(JtNode type, int y, bool resizeOnCreate = false, int insertIndex = -1)
+        private readonly EventManager childrenEventManager;
+        private (int, EditorItem) CreateEditorItem(JtNode node, int y, bool resizeOnCreate = false, int insertIndex = -1)
         {
             EditorItem bei;
 
+
             if (resizeOnCreate)
             {
-                value[type.Name!] = null;
-                bei = Create(type, null, RootEditor, childrenEventManagerProvider);
+                value[node.Name!] = null;
+                bei = Create(node, null, RootEditor, childrenEventManager);
             }
             else
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
-                    bei = Create(type, value[type.Name!], RootEditor, childrenEventManagerProvider);
+                    bei = Create(node, value[node.Name!], RootEditor, childrenEventManager);
                 else
                 {
                     JToken? value = null;
-                    int index = type.Parent?.Children.IndexOf(type) ?? -1;
+                    int index = node.Parent.Owner?.Children.IndexOf(node) ?? -1;
                     if (index >= 0 && ValidValue!.Count > index)
                         value = this.value[index];
 
 
 
-                    bei = Create(type, value, RootEditor, childrenEventManagerProvider);
+                    bei = Create(node, value, RootEditor, childrenEventManager);
                 }
             }
 
@@ -104,10 +108,10 @@ namespace Aadev.JTF.Editor.EditorItems
             if (bei.IsSaveable)
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
-                    value[type.Name!] = bei.Value;
+                    value[node.Name!] = bei.Value;
                 else
                 {
-                    int index = type.Parent?.Children.IndexOf(type) ?? -1;
+                    int index = node.Parent.Owner?.Children.IndexOf(node) ?? -1;
                     if (ValidValue!.Count > index)
                         value[index] = bei.Value;
                     else
@@ -144,10 +148,10 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (bei.IsSaveable)
                 {
                     if (Node.ContainerJsonType is JtContainerType.Block)
-                        value[type.Name!] = bei.Value;
+                        value[node.Name!] = bei.Value;
                     else
                     {
-                        int index = type.Parent?.Children.IndexOf(type) ?? -1;
+                        int index = node.Parent.Owner?.Children.IndexOf(node) ?? -1;
                         if (ValidValue!.Count > index)
                             value[index] = bei.Value;
                         else
@@ -171,31 +175,38 @@ namespace Aadev.JTF.Editor.EditorItems
                         ((JObject)value).Remove(bei.Node.Name!);
 
                 }
-
-                OnValueChanged();
+                Invalidate();
+                OnValueChanged(e);
             };
 
             bei.TwinTypeChanged += (sender, e) =>
             {
-                if (sender is not EditorItem bei)
+                if (sender is not EditorItem bei || RootEditor.ReadOnly)
                     return;
                 SuspendLayout();
+                suspendUpdatingLayout = true;
+                int oldHeight = bei.Height;
                 int index = Controls.IndexOf(bei);
                 Controls.Remove(bei);
-
+                JToken oldValue = bei.Value;
                 (_, EditorItem newei) = CreateEditorItem(e.NewTwinNode, bei.Top, true, index);
 
                 newei.TabIndex = bei.TabIndex;
-
+                newei.Focus();
                 if (Value is JObject jobject)
                 {
-                    if (jobject[bei.Node.Name!] is JToken)
+                    if (jobject[bei.Node.Name!] is not null)
                     {
                         jobject.Remove(bei.Node.Name!);
-                        OnValueChanged();
+                        OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeTwinType, oldValue, newei.Value, this));
                     }
 
                 }
+
+                suspendUpdatingLayout = false;
+
+                if (oldHeight != newei.Height)
+                    UpdateLayout();
 
 
                 ResumeLayout();
@@ -207,6 +218,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             return (y, bei);
         }
+
 
         protected override void OnExpandChanged()
         {
@@ -227,8 +239,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 ResumeLayout();
                 return;
             }
-            y = Node.IsRoot ? 10 : 38;
-            if (!Node.IsRoot)
+            y = (Node.IsRoot && Node.Template.Roots.Count == 1) ? 10 : 38;
+            if (!Node.IsRoot || Node.Template.Roots.Count > 1)
             {
 
                 focusControl = new FocusableControl
@@ -281,13 +293,16 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (Node.IsDynamicName)
                 index++;
-            foreach (JtNode item in Node.Children)
+            foreach (JtNode item in Node.Children.Nodes!)
             {
                 if (!jsonNodes.Contains(item.Name!))
                     jsonNodes.Add(item.Name!);
                 JtNode[]? twinFamily = item.GetTwinFamily().ToArray();
-                
 
+                if (RootEditor.ReadOnly && !RootEditor.ShowEmptyNodesInReadOnlyMode && Node.ContainerJsonType is JtContainerType.Block && value[item.Name!] is null or { Type: JTokenType.Null })
+                {
+                    continue;
+                }
 
                 if (twinFamily.Length > 1)
                 {
@@ -295,23 +310,28 @@ namespace Aadev.JTF.Editor.EditorItems
                     {
                         continue;
                     }
-
-                    JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == value[item.Name!]?.Type);
-
-                    if (t is null)
+                    if (((JObject)value).ContainsKey(item.Name!))
                     {
-                        (y, EditorItem ei2) = CreateEditorItem(item, y);
-                        ei2.TabIndex = index;
-                        twins.Add(item.Name!);
-                        index++;
-
-                        continue;
+                        JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == value[item.Name!]?.Type);
+                        if (t is not null)
+                        {
+                            (y, EditorItem ei3) = CreateEditorItem(t, y);
+                            ei3.TabIndex = index;
+                            twins.Add(item.Name!);
+                            index++;
+                            continue;
+                        }
                     }
-                    (y, EditorItem ei3) = CreateEditorItem(t, y);
-                    ei3.TabIndex = index;
+
+
+                    (y, EditorItem ei2) = CreateEditorItem(item, y);
+                    ei2.TabIndex = index;
                     twins.Add(item.Name!);
                     index++;
+
                     continue;
+
+
                 }
                 (y, EditorItem ei) = CreateEditorItem(item, y);
                 ei.TabIndex = index;
@@ -362,9 +382,9 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnControlRemoved(ControlEventArgs e)
         {
             base.OnControlRemoved(e);
-            if (!Expanded)
+            if (!Expanded || e.Control is not IJsonItem jsonItem)
                 return;
-            OnValueChanged();
+            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.RemoveToken, jsonItem.Value, null, this));
             UpdateLayout();
         }
     }

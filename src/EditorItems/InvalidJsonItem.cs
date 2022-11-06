@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor.EditorItems
 {
-    public partial class InvalidJsonItem : UserControl, IJsonItem
+    internal partial class InvalidJsonItem : UserControl, IJsonItem
     {
         private int xOffset;
         private int innerHeight;
@@ -17,6 +17,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
         public JsonJtfEditor RootEditor { get; }
         public JToken Value { get; }
+
+        public string Path => throw new NotImplementedException();
 
         public InvalidJsonItem(JToken value, JsonJtfEditor rootEditor)
         {
@@ -53,7 +55,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             Graphics g = e.Graphics;
 
-            Color borderColor = Color.Red;
+            Color borderColor = RootEditor.InvalidBorderColor;
 
             if (Focused)
             {
@@ -84,7 +86,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 SizeF nameSize = g.MeasureString(name, Font);
 
 
-                g.DrawString(name, Font, EditorItem.redBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
+                g.DrawString(name, Font, RootEditor.InvalidElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
                 xOffset += (int)nameSize.Width;
 
 
@@ -92,19 +94,23 @@ namespace Aadev.JTF.Editor.EditorItems
                 xOffset += 20;
             }
             removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
-            g.FillRectangle(EditorItem.redBrush, removeButtonBounds);
+            if(!RootEditor.ReadOnly)
+            {
 
-            g.DrawLine(EditorItem.whitePen, Width - 20, 12, Width - 12, 20);
-            g.DrawLine(EditorItem.whitePen, Width - 12, 12, Width - 20, 20);
+                g.FillRectangle(RootEditor.RemoveItemButtonBackBrush, removeButtonBounds);
+
+                g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - 20, 12, Width - 12, 20);
+                g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - 12, 12, Width - 20, 20);
+            }
 
             SizeF viewValueSize = g.MeasureString(Properties.Resources.ViewValue, Font);
 
             viewValueButtonBounds = new RectangleF(xOffset, 0, viewValueSize.Width + 20, 32);
 
-            g.FillRectangle(EditorItem.redBrush, viewValueButtonBounds);
+            g.FillRectangle(RootEditor.DiscardInvalidValueButtonBackBrush, viewValueButtonBounds);
 
 
-            g.DrawString(Properties.Resources.ViewValue, Font, EditorItem.whiteBrush, new PointF(xOffset + 10, 16 - viewValueSize.Height / 2));
+            g.DrawString(Properties.Resources.ViewValue, Font, RootEditor.DiscardInvalidValueButtonForeBrush, new PointF(xOffset + 10, 16 - viewValueSize.Height / 2));
             xOffset += (int)viewValueSize.Width;
 
 
@@ -120,15 +126,16 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
+
             if (viewValueButtonBounds.Contains(e.Location))
-                MessageBox.Show(Value.ToString(Newtonsoft.Json.Formatting.Indented));
+                MessageBox.Show(this, Value.ToString(Newtonsoft.Json.Formatting.Indented), "View Value", MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
             else if (removeButtonBounds.Contains(e.Location))
             {
-                if (Parent is not BlockEditorItem parent)
+                if (Parent is not BlockEditorItem parent || RootEditor.ReadOnly)
                     return;
                 if (name is not null)
                 {
-                    ((JObject?)parent.Value)?.Property(name)?.Remove();
+                    ((JObject?)parent.Value)?.Property(name, StringComparison.Ordinal)?.Remove();
                     parent.Controls.Remove(this);
 
                 }

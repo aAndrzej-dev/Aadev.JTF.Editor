@@ -1,5 +1,6 @@
 ﻿using Aadev.JTF.Types;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -24,16 +25,17 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (!JToken.DeepEquals(this.value, value))
                 {
+                    JToken oldValue = this.value;
                     this.value = value;
                     Invalidate();
-                    OnValueChanged();
+                    OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, value, this));
                 }
             }
         }
 
         private new JtBool Node => (JtBool)base.Node;
 
-        internal BoolEditorItem(JtNode type, JToken? token, JsonJtfEditor jsonJtfEditor, IEventManagerProvider eventManagerProvider) : base(type, token, jsonJtfEditor, eventManagerProvider) 
+        internal BoolEditorItem(JtBool type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
         {
             value ??= Node.CreateDefaultValue();
         }
@@ -42,34 +44,59 @@ namespace Aadev.JTF.Editor.EditorItems
             base.OnPaint(e);
             if (IsInvalidValueType)
                 return;
+            if (IsFocused)
+                xOffset++;
             int width = Width - xOffset - xRightOffset;
-            int halfWidth = (int)(width * 0.5f);
 
 
             Graphics g = e.Graphics;
 
-            falsePanelRect = new Rectangle(xOffset, yOffset, halfWidth, innerHeight);
-            truePanelRect = new Rectangle(xOffset + halfWidth, yOffset, halfWidth, innerHeight);
-            if (RawValue ?? Node.Default)
-                g.FillRectangle(greenBrush, truePanelRect);
+            if (Node.Constant)
+            {
+                if (Node.Default)
+                {
+                    truePanelRect = new Rectangle(xOffset, yOffset, width, innerHeight);
+                    falsePanelRect = Rectangle.Empty;
+                }
+                else
+                {
+                    truePanelRect = Rectangle.Empty;
+                    falsePanelRect = new Rectangle(xOffset, yOffset, width, innerHeight);
+                }
+            }
             else
-                g.FillRectangle(redBrush, falsePanelRect);
+            {
+                double halfWidth = width * 0.5;
+                falsePanelRect = new Rectangle(xOffset, yOffset, (int)halfWidth, innerHeight);
+                truePanelRect = new Rectangle(xOffset + (int)halfWidth, yOffset, (int)Math.Ceiling(halfWidth), innerHeight);
+            }
 
 
-            SizeF falseLabelSize = g.MeasureString("False", Font);
+            if (RawValue ?? Node.Default)
+                g.FillRectangle(RootEditor.TrueValueBackBrush, truePanelRect);
+            else
+                g.FillRectangle(RootEditor.FalseValueBackBrush, falsePanelRect);
 
-            g.DrawString("False", Font, RawValue ?? Node.Default ? ForeColorBrush : whiteBrush, new PointF(xOffset + width / 4 - falseLabelSize.Width / 2, 16 - falseLabelSize.Height / 2));
+            if (!falsePanelRect.IsEmpty)
+            {
+                SizeF falseLabelSize = g.MeasureString("False", Font);
 
-            SizeF trueLabelSize = g.MeasureString("True", Font);
+                g.DrawString("False", Font, (RawValue ?? Node.Default) ? ForeColorBrush : RootEditor.FalseValueForeBrush, falsePanelRect.X + falsePanelRect.Width / 2 - falseLabelSize.Width / 2, falsePanelRect.Y + falsePanelRect.Height / 2 - falseLabelSize.Height / 2);
+            }
+            if (!truePanelRect.IsEmpty)
+            {
+                SizeF trueLabelSize = g.MeasureString("True", Font);
 
-            g.DrawString("True", Font, RawValue ?? Node.Default ? whiteBrush : ForeColorBrush, new PointF(xOffset + halfWidth + width / 4 - trueLabelSize.Width / 2, 16 - trueLabelSize.Height / 2));
+                g.DrawString("True", Font, (RawValue ?? Node.Default) ? RootEditor.TrueValueForeBrush : ForeColorBrush, truePanelRect.X + truePanelRect.Width / 2 - trueLabelSize.Width / 2, truePanelRect.Y + truePanelRect.Height / 2 - trueLabelSize.Height / 2);
+            }
+
 
         }
         protected override void OnMouseClick(MouseEventArgs e)
         {
             base.OnMouseClick(e);
 
-            if (IsInvalidValueType)
+            if (IsInvalidValueType || RootEditor.ReadOnly)
                 return;
 
 
@@ -92,9 +119,8 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnKeyDown(e);
 
-            if (IsInvalidValueType)
+            if (IsInvalidValueType || RootEditor.ReadOnly)
                 return;
-
             if (e.KeyCode == Keys.Space)
             {
                 Value = (bool?)Value is false;
