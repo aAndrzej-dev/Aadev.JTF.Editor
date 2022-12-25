@@ -81,13 +81,14 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (resizeOnCreate)
             {
-                value[node.Name!] = null;
+                if(node.Name is not null)
+                    value[node.Name] = null;
                 bei = Create(node, null, RootEditor, childrenEventManager);
             }
             else
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
-                    bei = Create(node, value[node.Name!], RootEditor, childrenEventManager);
+                    bei = Create(node, node.Name is null ? null : value[node.Name], RootEditor, childrenEventManager);
                 else
                 {
                     JToken? value = null;
@@ -295,29 +296,35 @@ namespace Aadev.JTF.Editor.EditorItems
                 index++;
             foreach (JtNode item in Node.Children.Nodes!)
             {
-                if (!jsonNodes.Contains(item.Name!))
-                    jsonNodes.Add(item.Name!);
-                JtNode[]? twinFamily = item.GetTwinFamily().ToArray();
+                if (item.Name is null)
+                    continue;
+                if (!jsonNodes.Contains(item.Name))
+                    jsonNodes.Add(item.Name);
 
-                if (RootEditor.ReadOnly && !RootEditor.ShowEmptyNodesInReadOnlyMode && Node.ContainerJsonType is JtContainerType.Block && value[item.Name!] is null or { Type: JTokenType.Null })
+
+                if (RootEditor.ReadOnly && !RootEditor.ShowEmptyNodesInReadOnlyMode && Node.ContainerJsonType is JtContainerType.Block && value[item.Name] is null or { Type: JTokenType.Null })
                 {
                     continue;
                 }
 
+
+
+                JtNode[]? twinFamily = item.GetTwinFamily().ToArray();
+
                 if (twinFamily.Length > 1)
                 {
-                    if (twins.Contains(item.Name!))
+                    if (twins.Contains(item.Name))
                     {
                         continue;
                     }
-                    if (((JObject)value).ContainsKey(item.Name!))
+                    if (((JObject)value).ContainsKey(item.Name))
                     {
-                        JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == value[item.Name!]?.Type);
+                        JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == value[item.Name]?.Type);
                         if (t is not null)
                         {
                             (y, EditorItem ei3) = CreateEditorItem(t, y);
                             ei3.TabIndex = index;
-                            twins.Add(item.Name!);
+                            twins.Add(item.Name);
                             index++;
                             continue;
                         }
@@ -326,7 +333,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
                     (y, EditorItem ei2) = CreateEditorItem(item, y);
                     ei2.TabIndex = index;
-                    twins.Add(item.Name!);
+                    twins.Add(item.Name);
                     index++;
 
                     continue;
@@ -339,6 +346,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }
             if (value is JObject obj)
+            {
                 foreach (KeyValuePair<string, JToken?> item in obj)
                 {
                     if (jsonNodes.Contains(item.Key))
@@ -352,6 +360,8 @@ namespace Aadev.JTF.Editor.EditorItems
                     Controls.Add(invalidJsonItem);
                     y += 32 + 5;
                 }
+            }
+                
 
             Height = y + 5;
             ResumeLayout();

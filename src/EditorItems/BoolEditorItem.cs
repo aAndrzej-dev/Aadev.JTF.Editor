@@ -73,21 +73,21 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
             if (RawValue ?? Node.Default)
-                g.FillRectangle(RootEditor.TrueValueBackBrush, truePanelRect);
+                g.FillRectangle(RootEditor.ColorTable.TrueValueBackBrush, truePanelRect);
             else
-                g.FillRectangle(RootEditor.FalseValueBackBrush, falsePanelRect);
+                g.FillRectangle(RootEditor.ColorTable.FalseValueBackBrush, falsePanelRect);
 
             if (!falsePanelRect.IsEmpty)
             {
                 SizeF falseLabelSize = g.MeasureString("False", Font);
 
-                g.DrawString("False", Font, (RawValue ?? Node.Default) ? ForeColorBrush : RootEditor.FalseValueForeBrush, falsePanelRect.X + falsePanelRect.Width / 2 - falseLabelSize.Width / 2, falsePanelRect.Y + falsePanelRect.Height / 2 - falseLabelSize.Height / 2);
+                g.DrawString("False", Font, (RawValue ?? Node.Default) ? ForeColorBrush : RootEditor.ColorTable.FalseValueForeBrush, falsePanelRect.X + falsePanelRect.Width / 2 - falseLabelSize.Width / 2, falsePanelRect.Y + falsePanelRect.Height / 2 - falseLabelSize.Height / 2);
             }
             if (!truePanelRect.IsEmpty)
             {
                 SizeF trueLabelSize = g.MeasureString("True", Font);
 
-                g.DrawString("True", Font, (RawValue ?? Node.Default) ? RootEditor.TrueValueForeBrush : ForeColorBrush, truePanelRect.X + truePanelRect.Width / 2 - trueLabelSize.Width / 2, truePanelRect.Y + truePanelRect.Height / 2 - trueLabelSize.Height / 2);
+                g.DrawString("True", Font, (RawValue ?? Node.Default) ? RootEditor.ColorTable.TrueValueForeBrush : ForeColorBrush, truePanelRect.X + truePanelRect.Width / 2 - trueLabelSize.Width / 2, truePanelRect.Y + truePanelRect.Height / 2 - trueLabelSize.Height / 2);
             }
 
 

@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor
 {
-    public partial class SuggestionSelectForm : Form, ISuggestionSelector
+    internal partial class SuggestionSelectForm : Form, ISuggestionSelector
     {
         public SuggestionSelectForm()
         {
@@ -157,7 +157,7 @@ namespace Aadev.JTF.Editor
         }
 
     }
-    public class DynamicSuggestion<TSuggestion> : IJtSuggestion
+    internal class DynamicSuggestion<TSuggestion> : IJtSuggestion
     {
         public Type SuggestionType => typeof(TSuggestion);
 

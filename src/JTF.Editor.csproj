@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	 <TargetFramework>net6.0-windows</TargetFramework>
-	 <UseWindowsForms>true</UseWindowsForms>
+	<TargetFrameworks>net7.0-windows;net6.0-windows</TargetFrameworks>
+	<UseWindowsForms>true</UseWindowsForms>
 	<RootNamespace>Aadev.JTF.Editor</RootNamespace>
 	<AssemblyName>Aadev.JTF.Editor</AssemblyName>
 	<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -13,11 +13,12 @@
 	<DebugType>none</DebugType>
 	<AssemblyVersion>2.0.0.0</AssemblyVersion>
 	<FileVersion>2.0.0.0</FileVersion>
-	<Version>2.0.0-beta1</Version>
+	<Version>2.0.0-beta2</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Bug fixes and improvements</PackageReleaseNotes>
+    <PackageReleaseNotes>Added support for multiple prefabs of the same type
+Bug fixes and improvements</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
@@ -26,7 +27,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0" />
-    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta1" />
+    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta2" />
   </ItemGroup>
 
   <ItemGroup>

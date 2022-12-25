@@ -55,7 +55,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             Graphics g = e.Graphics;
 
-            Color borderColor = RootEditor.InvalidBorderColor;
+            Color borderColor = RootEditor.ColorTable.InvalidBorderColor;
 
             if (Focused)
             {
@@ -86,7 +86,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 SizeF nameSize = g.MeasureString(name, Font);
 
 
-                g.DrawString(name, Font, RootEditor.InvalidElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
+                g.DrawString(name, Font, RootEditor.ColorTable.InvalidElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
                 xOffset += (int)nameSize.Width;
 
 
@@ -97,20 +97,20 @@ namespace Aadev.JTF.Editor.EditorItems
             if(!RootEditor.ReadOnly)
             {
 
-                g.FillRectangle(RootEditor.RemoveItemButtonBackBrush, removeButtonBounds);
+                g.FillRectangle(RootEditor.ColorTable.RemoveItemButtonBackBrush, removeButtonBounds);
 
-                g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - 20, 12, Width - 12, 20);
-                g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - 12, 12, Width - 20, 20);
+                g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - 20, 12, Width - 12, 20);
+                g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - 12, 12, Width - 20, 20);
             }
 
             SizeF viewValueSize = g.MeasureString(Properties.Resources.ViewValue, Font);
 
             viewValueButtonBounds = new RectangleF(xOffset, 0, viewValueSize.Width + 20, 32);
 
-            g.FillRectangle(RootEditor.DiscardInvalidValueButtonBackBrush, viewValueButtonBounds);
+            g.FillRectangle(RootEditor.ColorTable.DiscardInvalidValueButtonBackBrush, viewValueButtonBounds);
 
 
-            g.DrawString(Properties.Resources.ViewValue, Font, RootEditor.DiscardInvalidValueButtonForeBrush, new PointF(xOffset + 10, 16 - viewValueSize.Height / 2));
+            g.DrawString(Properties.Resources.ViewValue, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, new PointF(xOffset + 10, 16 - viewValueSize.Height / 2));
             xOffset += (int)viewValueSize.Width;
 
 

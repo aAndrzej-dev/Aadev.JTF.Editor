@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Aadev.JTF.Editor
 {
@@ -11,7 +11,7 @@ namespace Aadev.JTF.Editor
         private readonly EventManager? parent;
         public EventManager(IIdentifiersManager identifiersManager, EventManager? parent)
         {
-            JtNode[] array = identifiersManager.GetRegisteredNodes();
+            Span<JtNode> array = identifiersManager.GetRegisteredNodes();
 
             changedEvents = new List<ChangedEvent>();
             for (int i = 0; i < array.Length; i++)
@@ -23,7 +23,18 @@ namespace Aadev.JTF.Editor
             this.parent = parent;
         }
 
-        private void IdentifiersManager_NodeUnregistered(object? sender, NodeIdentifierEventArgs e) => changedEvents.Remove(changedEvents.Where(x => x.Id == e.Id).First());
+        private void IdentifiersManager_NodeUnregistered(object? sender, NodeIdentifierEventArgs e)
+        {
+            Span<ChangedEvent> changedEventsSpan = CollectionsMarshal.AsSpan(changedEvents);
+            for (int i = 0; i < changedEventsSpan.Length; i++)
+            {
+                if (changedEventsSpan[i].Id == e.Id)
+                {
+                    changedEvents.RemoveAt(i);
+                }
+            }
+        }
+
         private void IdentifiersManager_NodeRegistered(object? sender, NodeIdentifierEventArgs e) => changedEvents.Add(new ChangedEvent(e.Id));
 
         public ChangedEvent? GetEvent(JtIdentifier id)

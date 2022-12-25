@@ -37,9 +37,6 @@ namespace Aadev.JTF.Editor.EditorItems
                     if (SuggestionEqualJValue(item, ValidValue))
                         return false;
                 }
-
-
-
                 return true;
             }
         }
@@ -53,9 +50,9 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (InvalidValue)
                 {
                     if (Node.ForecUsingSuggestions)
-                        return RootEditor.InvalidBorderColor;
+                        return RootEditor.ColorTable.InvalidBorderColor;
                     else
-                        return RootEditor.WarningBorderColor;
+                        return RootEditor.ColorTable.WarningBorderColor;
                 }
                 return base.BorderColor;
             }
@@ -180,8 +177,8 @@ namespace Aadev.JTF.Editor.EditorItems
                     {
                         Font = Font,
                         FlatStyle = FlatStyle.Flat,
-                        BackColor = RootEditor.TextBoxBackColor,
-                        ForeColor = RootEditor.TextBoxForeColor,
+                        BackColor = RootEditor.ColorTable.TextBoxBackColor,
+                        ForeColor = RootEditor.ColorTable.TextBoxForeColor,
                         AutoSize = false,
                         Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                         Width = Width - xOffset - 12 - xRightOffset,
@@ -204,7 +201,6 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
                     Controls.Add(comboBox);
-
 
 
                     comboBox.Items.AddRange(suggestions);
@@ -245,8 +241,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 {
                     Font = Font,
                     BorderStyle = BorderStyle.None,
-                    BackColor = RootEditor.TextBoxBackColor,
-                    ForeColor = RootEditor.TextBoxForeColor,
+                    BackColor = RootEditor.ColorTable.TextBoxBackColor,
+                    ForeColor = RootEditor.ColorTable.TextBoxForeColor,
                     AutoSize = false,
                     Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                     Width = Width - textBoxBounds.X - 20 - xRightOffset,
@@ -372,7 +368,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 string message = string.Format(CultureInfo.CurrentCulture, Properties.Resources.InvalidValue, value.ToString());
 
                 SizeF sf = e.Graphics.MeasureString(message, Font);
-                e.Graphics.DrawString(message, Font, RootEditor.InvalidValueBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
+                e.Graphics.DrawString(message, Font, RootEditor.ColorTable.InvalidValueBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
 
                 xOffset += (int)sf.Width + 10;
 
@@ -384,8 +380,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 SizeF dsf = e.Graphics.MeasureString(discardMessage, Font);
 
                 discardInvalidValueButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
-                e.Graphics.FillRectangle(RootEditor.DiscardInvalidValueButtonBackBrush, discardInvalidValueButtonBounds);
-                e.Graphics.DrawString(discardMessage, Font, RootEditor.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - dsf.Height / 2);
+                e.Graphics.FillRectangle(RootEditor.ColorTable.DiscardInvalidValueButtonBackBrush, discardInvalidValueButtonBounds);
+                e.Graphics.DrawString(discardMessage, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - dsf.Height / 2);
 
 
 
@@ -399,7 +395,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
             textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
-            e.Graphics.FillRectangle(RootEditor.TextBoxBackBrush, textBoxBounds);
+            e.Graphics.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, textBoxBounds);
 
             if (valueBox is null)
             {
@@ -417,12 +413,12 @@ namespace Aadev.JTF.Editor.EditorItems
                         if (InvalidValue)
                         {
                             if (Node.ForecUsingSuggestions)
-                                brush2 = RootEditor.InvalidValueBrush;
+                                brush2 = RootEditor.ColorTable.InvalidValueBrush;
                             else
-                                brush2 = RootEditor.WarinigValueBrush;
+                                brush2 = RootEditor.ColorTable.WarinigValueBrush;
                         }
                         else
-                            brush2 = RootEditor.TextBoxForeBrush;
+                            brush2 = RootEditor.ColorTable.TextBoxForeBrush;
 
                         e.Graphics.DrawString(item.DisplayName, Font, brush2, new PointF(xOffset + 10, 16 - s.Height / 2));
                         return;
@@ -433,12 +429,12 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (InvalidValue)
                 {
                     if (Node.ForecUsingSuggestions)
-                        brush = RootEditor.InvalidValueBrush;
+                        brush = RootEditor.ColorTable.InvalidValueBrush;
                     else
-                        brush = RootEditor.WarinigValueBrush;
+                        brush = RootEditor.ColorTable.WarinigValueBrush;
                 }
                 else
-                    brush = RootEditor.TextBoxForeBrush;
+                    brush = RootEditor.ColorTable.TextBoxForeBrush;
 
 
                 SizeF sf = e.Graphics.MeasureString(Value.ToString(), Font);

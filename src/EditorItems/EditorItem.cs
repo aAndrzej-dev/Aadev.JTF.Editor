@@ -14,7 +14,6 @@ namespace Aadev.JTF.Editor.EditorItems
 {
     internal abstract partial class EditorItem : UserControl, IJsonItem
     {
- 
         private readonly JtNode[] twinsFamily;
         private readonly string toolTipText;
         private string? dynamicName;
@@ -36,27 +35,29 @@ namespace Aadev.JTF.Editor.EditorItems
         protected int innerHeight;
 
 
-        internal bool IsInvalidValueType => Value.Type != Node.JsonType;
+        internal virtual bool IsInvalidValueType => Value.Type != Node.JsonType;
         protected virtual bool IsFocused => Focused || txtDynamicName?.Focused is true;
         protected JsonJtfEditor RootEditor { get; }
         protected SolidBrush ForeColorBrush { get; private set; }
         protected bool CanCollapse => Node is JtContainer c && !c.DisableCollapse;
-        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; SuspendFocus = true; OnExpandChanged(); SuspendFocus = false; } }
+        protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; RootEditor.DisableScrollingToControl = true; SuspendFocus = true; OnExpandChanged(); SuspendFocus = false; RootEditor.DisableScrollingToControl = false; } }
         protected virtual Color BorderColor
         {
             get
             {
                 if (IsInvalidValueType)
-                    return RootEditor.InvalidBorderColor;
+                    return RootEditor.ColorTable.InvalidBorderColor;
+                else if (Parent is ArrayEditorItem aei && aei.SinglePrefab is not null && aei.SinglePrefab != Node)
+                    return RootEditor.ColorTable.WarningBorderColor;
                 else if (IsFocused)
-                    return RootEditor.AcitveBorderColor;
+                    return RootEditor.ColorTable.AcitveBorderColor;
                 else
-                    return RootEditor.InacitveBorderColor;
+                    return RootEditor.ColorTable.InacitveBorderColor;
             }
         }
 
         internal int ArrayIndex { get; set; } = -1;
-        internal virtual bool IsSaveable => Node.Required || Node.Parent?.Owner is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array } || Node.IsRoot;
+        internal virtual bool IsSaveable => Node.Required || Node.Parent?.Owner is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array } || Node.IsRoot || Node.IsArrayPrefab;
         internal bool SuspendFocus { get; private set; }
 
         public JtNode Node { get; }
@@ -68,7 +69,7 @@ namespace Aadev.JTF.Editor.EditorItems
         internal event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
         internal event EventHandler? HeightChanged;
 
-        protected internal EditorItem(JtNode node, JToken? token, JsonJtfEditor rootEditor, EventManager eventManager)
+        private protected EditorItem(JtNode node, JToken? token, JsonJtfEditor rootEditor, EventManager eventManager)
         {
             Node = node;
             RootEditor = rootEditor;
@@ -95,7 +96,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine(CultureInfo.InvariantCulture,$"{Node.Name}");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"{Node.Name}");
             if (!Node.Id.IsEmpty)
                 sb.AppendLine(CultureInfo.InvariantCulture, $"Id: {Node.Id}");
             if (Node.Description is not null)
@@ -111,8 +112,8 @@ namespace Aadev.JTF.Editor.EditorItems
                 ConditionInterpreter? interpreter = new ConditionInterpreter(x =>
                 {
                     string? id = x.ToLowerInvariant();
-                    if (vars.ContainsKey(id))
-                        return vars[id]!.Value ?? JValue.CreateNull();
+                    if (vars.TryGetValue(id, out ChangedEvent? ce))
+                        return ce.Value ?? JValue.CreateNull();
                     ChangedEvent? e = eventManager.GetEvent(id);
                     if (e is null)
                         return JValue.CreateNull();
@@ -177,8 +178,8 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 Font = Font,
                 BorderStyle = BorderStyle.None,
-                BackColor = RootEditor.TextBoxBackColor,
-                ForeColor = RootEditor.TextBoxForeColor,
+                BackColor = RootEditor.ColorTable.TextBoxBackColor,
+                ForeColor = RootEditor.ColorTable.TextBoxForeColor,
                 AutoSize = false,
                 TabIndex = 0,
 
@@ -209,7 +210,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 txtDynamicName = null;
             };
             txtDynamicName.GotFocus += (sender, e) => Invalidate();
-
+          
             Controls.Add(txtDynamicName);
             txtDynamicName?.Focus();
             txtDynamicName?.SelectAll();
@@ -250,7 +251,7 @@ namespace Aadev.JTF.Editor.EditorItems
             string message = string.Format(CultureInfo.CurrentCulture, Properties.Resources.InvalidValueType, Value.Type, Node.JsonType);
 
             SizeF sf = g.MeasureString(message, Font);
-            g.DrawString(message, Font, RootEditor.InvalidValueBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
+            g.DrawString(message, Font, RootEditor.ColorTable.InvalidValueBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
 
             xOffset += (int)sf.Width + 20;
 
@@ -259,8 +260,8 @@ namespace Aadev.JTF.Editor.EditorItems
             SizeF dsf = g.MeasureString(discardMessage, Font);
 
             discardInvalidTypeButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
-            g.FillRectangle(RootEditor.DiscardInvalidValueButtonBackBrush, discardInvalidTypeButtonBounds);
-            g.DrawString(discardMessage, Font, RootEditor.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - dsf.Height / 2);
+            g.FillRectangle(RootEditor.ColorTable.DiscardInvalidValueButtonBackBrush, discardInvalidTypeButtonBounds);
+            g.DrawString(discardMessage, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - dsf.Height / 2);
 
             xOffset += (int)sf.Width + 20;
         }
@@ -273,7 +274,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (Node is JtContainer)
             {
                 dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
-                g.FillRectangle(RootEditor.TextBoxBackBrush, dynamicNameTextboxBounds);
+                g.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, dynamicNameTextboxBounds);
 
                 if (txtDynamicName is not null)
                     return;
@@ -281,7 +282,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 SizeF sf = g.MeasureString(DynamicName, Font);
 
-                g.DrawString(DynamicName, Font, RootEditor.TextBoxForeBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
+                g.DrawString(DynamicName, Font, RootEditor.ColorTable.TextBoxForeBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
             else
             {
@@ -289,13 +290,13 @@ namespace Aadev.JTF.Editor.EditorItems
                 int size = (Width - xOffset - (int)s.Width - 10 - xRightOffset) / 2;
 
                 dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, size, innerHeight);
-                g.FillRectangle(RootEditor.TextBoxBackBrush, dynamicNameTextboxBounds);
+                g.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, dynamicNameTextboxBounds);
                 if (txtDynamicName is null)
                 {
 
                     SizeF sf = g.MeasureString(DynamicName, Font);
 
-                    g.DrawString(DynamicName, Font, RootEditor.TextBoxForeBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
+                    g.DrawString(DynamicName, Font, RootEditor.ColorTable.TextBoxForeBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
                 }
                 xOffset += size;
 
@@ -325,15 +326,15 @@ namespace Aadev.JTF.Editor.EditorItems
                 rectPath.AddLine(bounds.X, bounds.Y, w, bounds.Y);
                 rectPath.AddLine(w, bounds.Y, w, h);
                 rectPath.AddArc(bounds.X, h - 10, 10, 10, 90, 90);
-                g.FillPath(RootEditor.RemoveItemButtonBackBrush, rectPath);
+                g.FillPath(RootEditor.ColorTable.RemoveItemButtonBackBrush, rectPath);
 
                 g.SmoothingMode = SmoothingMode.Default;
             }
             else
-                g.FillRectangle(RootEditor.RemoveItemButtonBackBrush, removeButtonBounds);
+                g.FillRectangle(RootEditor.ColorTable.RemoveItemButtonBackBrush, removeButtonBounds);
 
-            g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - 20, 12, Width - 12, 20);
-            g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - 12, 12, Width - 20, 20);
+            g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - 20, 12, Width - 12, 20);
+            g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - 12, 12, Width - 20, 20);
 
             xRightOffset += width;
         }
@@ -342,30 +343,34 @@ namespace Aadev.JTF.Editor.EditorItems
             if (!string.IsNullOrEmpty(Node.DisplayName))
             {
                 int x = xOffset;
-                xOffset += 20;
+                xOffset += ArrayIndex != -1 ? 10 : 20;
 
-                string dn = ConvertToFriendlyName(Node.DisplayName);
+                string dn;
+                if(ArrayIndex != -1)
+                    dn = ConvertToFriendlyName($"{ArrayIndex} ({Node.DisplayName})");
+                else
+                    dn = ConvertToFriendlyName(Node.DisplayName);
 
                 SizeF nameSize = g.MeasureString(dn, Font);
 
-                g.DrawString(dn, Font, IsSaveable ? ForeColorBrush : RootEditor.DefaultElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
+                g.DrawString(dn, Font, IsSaveable ? ForeColorBrush : RootEditor.ColorTable.DefaultElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
                 xOffset += (int)nameSize.Width;
 
 
 
                 if (Node.Required)
                 {
-                    g.DrawString("*", Font, RootEditor.RequiredStarBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
+                    g.DrawString("*", Font, RootEditor.ColorTable.RequiredStarBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
                 }
 
 
 
 
 
-                xOffset += 20;
+                xOffset += ArrayIndex != -1 ? 10 : 20;
                 nameLabelBounds = new Rectangle(x, 1, xOffset - x, 30);
             }
-            if (ArrayIndex != -1)
+            else if (ArrayIndex != -1)
             {
                 int x = xOffset;
                 xOffset += 10;
@@ -425,13 +430,13 @@ namespace Aadev.JTF.Editor.EditorItems
                 else
                     rectPath.AddArc(bounds.X, h - 10, 10, 10, 90, 90);
 
-                g.FillPath(RootEditor.ExpandButtonBackBrush, rectPath);
+                g.FillPath(RootEditor.ColorTable.ExpandButtonBackBrush, rectPath);
 
                 g.SmoothingMode = SmoothingMode.Default;
 
             }
             else
-                g.FillRectangle(RootEditor.ExpandButtonBackBrush, expandButtonBounds);
+                g.FillRectangle(RootEditor.ColorTable.ExpandButtonBackBrush, expandButtonBounds);
 
 
             g.SmoothingMode = SmoothingMode.HighQuality;
@@ -447,18 +452,18 @@ namespace Aadev.JTF.Editor.EditorItems
 
             innerRectPath.AddArc(innerRectBounds.X, ih - 4, 4, 4, 90, 90);
             innerRectPath.CloseFigure();
-            g.DrawPath(RootEditor.ExpandButtonForePen, innerRectPath);
+            g.DrawPath(RootEditor.ColorTable.ExpandButtonForePen, innerRectPath);
             g.SmoothingMode = SmoothingMode.Default;
 
 
             if (Expanded)
             {
-                g.DrawLine(RootEditor.ExpandButtonForePen, xOffset + 12, 16, xOffset + 18, 16);
+                g.DrawLine(RootEditor.ColorTable.ExpandButtonForePen, xOffset + 12, 16, xOffset + 18, 16);
             }
             else
             {
-                g.DrawLine(RootEditor.ExpandButtonForePen, xOffset + 12, 16, xOffset + 18, 16);
-                g.DrawLine(RootEditor.ExpandButtonForePen, xOffset + 15, 12, xOffset + 15, 20);
+                g.DrawLine(RootEditor.ColorTable.ExpandButtonForePen, xOffset + 12, 16, xOffset + 18, 16);
+                g.DrawLine(RootEditor.ColorTable.ExpandButtonForePen, xOffset + 15, 12, xOffset + 15, 20);
             }
             xOffset += 30;
         }
@@ -467,10 +472,12 @@ namespace Aadev.JTF.Editor.EditorItems
             bool rounded = Node is JtContainer && Expanded && (!CanCollapse || twinsFamily[^1] != Node || twinsFamily[0] != Node);
 
 
-
-            for (int i = 0; i < twinsFamily.Length; i++)
+            Span<JtNode> twinFamilySpan = twinsFamily;
+            bool isLastNode = twinFamilySpan[^1] == Node;
+            bool isFirstNode = twinFamilySpan[0] == Node;
+            for (int i = 0; i < twinFamilySpan.Length; i++)
             {
-                JtNode item = twinsFamily[i];
+                JtNode item = twinFamilySpan[i];
                 if (Node.IsArrayPrefab && Node != item)
                 {
                     continue;
@@ -493,20 +500,21 @@ namespace Aadev.JTF.Editor.EditorItems
                         float h = bounds.Y + bounds.Height;
                         rectPath.AddLine(bounds.X, bounds.Y, w, bounds.Y);
 
-                        if (twinsFamily[^1] != Node || !CanDrawExpandButton)
+                        
+                        if (!isLastNode || !CanDrawExpandButton)
                             rectPath.AddArc(w - 10, h - 10, 10, 10, 0, 90);
                         else
                             rectPath.AddLine(w, bounds.Y, w, h);
-                        if (twinsFamily[0] == Node)
+                        if (isFirstNode)
                             rectPath.AddLine(bounds.X, h, bounds.X, bounds.Y);
                         else
                             rectPath.AddArc(bounds.X, h - 10, 10, 10, 90, 90);
-                        g.FillPath(RootEditor.SelectedNodeTypeBackBrush, rectPath);
+                        g.FillPath(RootEditor.ColorTable.SelectedNodeTypeBackBrush, rectPath);
 
                         g.SmoothingMode = SmoothingMode.Default;
                     }
                     else
-                        g.FillRectangle(RootEditor.SelectedNodeTypeBackBrush, xOffset, yOffset, width, innerHeight);
+                        g.FillRectangle(RootEditor.ColorTable.SelectedNodeTypeBackBrush, xOffset, yOffset, width, innerHeight);
 
                 }
 
@@ -577,7 +585,11 @@ namespace Aadev.JTF.Editor.EditorItems
         {
             base.OnMouseClick(e);
 
-
+            if (e.Button != MouseButtons.Left)
+            {
+                Focus();
+                return;
+            }
             if (expandButtonBounds.Contains(e.Location))
             {
                 Expanded = !Expanded;
@@ -585,11 +597,6 @@ namespace Aadev.JTF.Editor.EditorItems
                 {
                     DeepExpand();
                 }
-                return;
-            }
-            if (e.Button != MouseButtons.Left)
-            {
-                Focus();
                 return;
             }
             if (removeButtonBounds.Contains(e.Location))
@@ -682,7 +689,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseDoubleClick(MouseEventArgs e)
         {
             base.OnMouseDoubleClick(e);
-            var json = Node.GetJson();
+            string json = Node.GetJson();
             Clipboard.SetText(json);
             MessageBox.Show(json);
         }
@@ -780,19 +787,19 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }));
         }
-        public static EditorItem Create(JtNode node, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager)
+        public static EditorItem Create(JtNode node, JToken? token, JsonJtfEditor rootEditor, EventManager eventManager)
         {
             if (node is JtBool boolNode)
-                return new BoolEditorItem(boolNode, token, jsonJtfEditor, eventManager);
+                return new BoolEditorItem(boolNode, token, rootEditor, eventManager);
             if (node is JtValue valueNode)
-                return new ValueEditorItem(valueNode, token, jsonJtfEditor, eventManager);
+                return new ValueEditorItem(valueNode, token, rootEditor, eventManager);
             if (node is JtBlock blockNode)
-                return new BlockEditorItem(blockNode, token, jsonJtfEditor, eventManager);
+                return new BlockEditorItem(blockNode, token, rootEditor, eventManager);
             if (node is JtArray arrayNode)
-                return new ArrayEditorItem(arrayNode, token, jsonJtfEditor, eventManager);
-           throw new ArgumentOutOfRangeException(nameof(node));
+                return new ArrayEditorItem(arrayNode, token, rootEditor, eventManager);
+            return new UnknownEditorItem(node, token, rootEditor, eventManager);
         }
-  
+
 
 
         protected class FocusableControl : UserControl

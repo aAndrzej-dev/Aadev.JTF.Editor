@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor.EditorItems
@@ -120,8 +121,25 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             for (int i = 0; i < jArray.Count; i++)
             {
-                CreateArrayItem(i, Node.Prefabs.Nodes!.FirstOrDefault(x => x.JsonType == jArray[i].Type) ?? Node.Prefabs.Nodes![0], jArray[i]);
+                CreateArrayItem(i, Node.Prefabs.Nodes!.FirstOrDefault(x => CheckPrefab(x, jArray[i])) ?? Node.Prefabs.Nodes![0], jArray[i]);
             }
+
+        }
+        private bool CheckPrefab(JtNode prefab, JToken value)
+        {
+            if (prefab.JsonType != value.Type)
+                return false;
+
+            if (prefab is JtBlock b && b.JsonType is JTokenType.Object)
+            {
+                foreach (JProperty item in ((JObject)value).Properties())
+                {
+                    if (!b.Children.Nodes!.Any(x => x.Name == item.Name))
+                        return false;
+
+                }
+            }
+            return true;
 
         }
         private void LoadAsObject()
@@ -256,16 +274,16 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (sender is not EditorItem bei)
                     return;
-                SuspendLayout();
                 int oy = bei.Top + bei.Height + 5;
-                foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
+                foreach (EditorItem control in Controls.Cast<Control>().Where(x => x.Top > bei.Top && x is EditorItem))
                 {
-                    control.Top = oy;
+                    if (control.Top != oy)
+                        control.Top = oy;
                     oy += control.Height;
                     oy += 5;
+
                 }
-                Height = y = oy + 10;
-                ResumeLayout();
+                Height = oy + 10;
             };
 
 
@@ -292,6 +310,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     {
                         MessageBox.Show(string.Format(CultureInfo.CurrentCulture, Properties.Resources.ArrayObjectNameExist, bei.DynamicName), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         bei.DynamicName = keyValuePair?.Key;
+                        bei.Focus();
                         return;
                     }
                     if (keyValuePair?.Key is not null)
@@ -376,6 +395,9 @@ namespace Aadev.JTF.Editor.EditorItems
                 return base.BorderColor;
             }
         }
+
+        internal JtNode? SinglePrefab { get => singlePrefab; }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -401,14 +423,14 @@ namespace Aadev.JTF.Editor.EditorItems
                     rectPath.AddLine(bounds.X, bounds.Y, w, bounds.Y);
                     rectPath.AddLine(w, bounds.Y, w, h);
                     rectPath.AddArc(bounds.X, h - 10, 10, 10, 90, 90);
-                    g.FillPath(RootEditor.AddItemButtonBackBrush, rectPath);
+                    g.FillPath(RootEditor.ColorTable.AddItemButtonBackBrush, rectPath);
 
                     g.SmoothingMode = SmoothingMode.Default;
                 }
                 else
-                    g.FillRectangle(RootEditor.AddItemButtonBackBrush, addNewButtonBounds);
-                g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - addWidth - xRightOffset + 15, 8, Width - addWidth - xRightOffset + 15, 24);
-                g.DrawLine(RootEditor.RemoveItemButtonForePen, Width - addWidth - xRightOffset + 7, 16, Width - addWidth - xRightOffset + 23, 16);
+                    g.FillRectangle(RootEditor.ColorTable.AddItemButtonBackBrush, addNewButtonBounds);
+                g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - addWidth - xRightOffset + 15, 8, Width - addWidth - xRightOffset + 15, 24);
+                g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - addWidth - xRightOffset + 7, 16, Width - addWidth - xRightOffset + 23, 16);
                 xRightOffset += addWidth;
 
             }
@@ -492,12 +514,19 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void InitContextMenu()
         {
-            if (cmsPrefabSelect is not null || Node.Prefabs.Nodes!.Count <= 1 )
+            if (cmsPrefabSelect is not null || Node.Prefabs.Nodes!.Count <= 1)
                 return;
             cmsPrefabSelect = new ContextMenuStrip();
-            foreach (JtNode? item in Node.Prefabs.Nodes!)
+            Span<JtNode> collectionSpan = CollectionsMarshal.AsSpan(Node.Prefabs.Nodes);
+            for (int i = 0; i < collectionSpan.Length; i++)
             {
-                ToolStripMenuItem? tsmi = new ToolStripMenuItem() { Text = item.Type.DisplayName, Tag = item };
+                JtNode? item = collectionSpan[i];
+                ToolStripMenuItem? tsmi = new ToolStripMenuItem() { Tag = item };
+
+                if (item.Name is null)
+                    tsmi.Text = item.Type.DisplayName;
+                else
+                    tsmi.Text = $"{item.Name} ({item.Type.DisplayName})";
 
 
                 Bitmap? bmp = Properties.Resources.ResourceManager.GetObject(item.Type.Name, CultureInfo.InvariantCulture) as Bitmap;
@@ -507,7 +536,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 tsmi.BackColor = Color.FromArgb(80, 80, 80);
                 tsmi.ForeColor = Color.White;
-
+                tsmi.ImageTransparentColor = Color.FromArgb(80, 80, 80);
+                tsmi.ImageScaling = ToolStripItemImageScaling.SizeToFit;
                 tsmi.Click += OnPrefabSelect_Click;
                 cmsPrefabSelect.Items.Add(tsmi);
             }
