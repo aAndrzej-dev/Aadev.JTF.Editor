@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Windows.Forms;
 
 namespace Aadev.JTF.Editor.EditorItems
@@ -17,8 +18,9 @@ namespace Aadev.JTF.Editor.EditorItems
         private JToken value;
         private Rectangle textBoxBounds = Rectangle.Empty;
         private Rectangle discardInvalidValueButtonBounds = Rectangle.Empty;
+        private Rectangle restoreDefaultValueButtonBounds = Rectangle.Empty;
 
-        private new JtValue Node => (JtValue)base.Node;
+        private new JtValueNode Node => (JtValueNode)base.Node;
         private bool InvalidValue
         {
             get
@@ -30,7 +32,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (IsEqualToDefaultValue())
                     return false;
 
-                if (Node.Suggestions.IsEmpty)
+                if (Node.TryGetSuggestions() is null || Node.Suggestions.IsEmpty)
                     return false;
                 foreach (IJtSuggestion item in Node.Suggestions.GetSuggestions(GetDynamicSuggestions))
                 {
@@ -42,14 +44,14 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         protected override bool IsFocused => base.IsFocused || valueBox?.Focused is true;
-        internal override bool IsSaveable => base.IsSaveable || (Value.Type != JTokenType.Null && !IsEqualToDefaultValue());
+        internal override bool IsSavable => base.IsSavable || (Value.Type != JTokenType.Null && !IsEqualToDefaultValue());
         protected override Color BorderColor
         {
             get
             {
                 if (InvalidValue)
                 {
-                    if (Node.ForecUsingSuggestions)
+                    if (Node.ForceUsingSuggestions)
                         return RootEditor.ColorTable.InvalidBorderColor;
                     else
                         return RootEditor.ColorTable.WarningBorderColor;
@@ -75,11 +77,74 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         public JValue? ValidValue => Value as JValue;
 
-        [MemberNotNullWhen(false, "ValidValue")] public new bool IsInvalidValueType => base.IsInvalidValueType;
-        internal ValueEditorItem(JtValue type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
+        [MemberNotNullWhen(false, nameof(ValidValue))] public new bool IsInvalidValueType => base.IsInvalidValueType;
+        internal ValueEditorItem(JtValueNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
         {
             value ??= Node.CreateDefaultValue();
 
+            StringBuilder sb = new StringBuilder(toolTipText);
+
+            switch (Node)
+            {
+                case JtByteNode n:
+                    if (RootEditor.ShowAdvancedToolTip || n.Min != byte.MinValue)
+                        sb.AppendLine($"Min: {n.Min}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Max != byte.MaxValue)
+                        sb.AppendLine($"Max: {n.Max}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Default != 0)
+                        sb.AppendLine($"Default: {n.Default}");
+                    break;
+                case JtShortNode n:
+                    if (RootEditor.ShowAdvancedToolTip || n.Min != short.MinValue)
+                        sb.AppendLine($"Min: {n.Min}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Max != short.MaxValue)
+                        sb.AppendLine($"Max: {n.Max}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Default != 0)
+                        sb.AppendLine($"Default: {n.Default}");
+                    break;
+                case JtIntNode n:
+                    if (RootEditor.ShowAdvancedToolTip || n.Min != int.MinValue)
+                        sb.AppendLine($"Min: {n.Min}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Max != int.MaxValue)
+                        sb.AppendLine($"Max: {n.Max}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Default != 0)
+                        sb.AppendLine($"Default: {n.Default}");
+                    break;
+                case JtLongNode n:
+                    if (RootEditor.ShowAdvancedToolTip || n.Min != long.MinValue)
+                        sb.AppendLine($"Min: {n.Min}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Max != long.MaxValue)
+                        sb.AppendLine($"Max: {n.Max}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Default != 0)
+                        sb.AppendLine($"Default: {n.Default}");
+                    break;
+                case JtFloatNode n:
+                    if (RootEditor.ShowAdvancedToolTip || n.Min != float.MinValue)
+                        sb.AppendLine($"Min: {n.Min}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Max != float.MaxValue)
+                        sb.AppendLine($"Max: {n.Max}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Default != 0)
+                        sb.AppendLine($"Default: {n.Default}");
+                    break;
+                case JtDoubleNode n:
+                    if (RootEditor.ShowAdvancedToolTip || n.Min != double.MinValue)
+                        sb.AppendLine($"Min: {n.Min}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Max != double.MaxValue)
+                        sb.AppendLine($"Max: {n.Max}");
+                    if (RootEditor.ShowAdvancedToolTip || n.Default != 0)
+                        sb.AppendLine($"Default: {n.Default}");
+                    break;
+                case JtStringNode n:
+                    if(RootEditor.ShowAdvancedToolTip || n.MaxLength != -1)
+                        sb.AppendLine($"Max Length: {n.MaxLength}");
+                    if(RootEditor.ShowAdvancedToolTip || n.MinLength != 0)
+                        sb.AppendLine($"Min Length: {n.MinLength}");
+                    break;
+                default: 
+                    throw new Exception();
+            }
+
+            toolTipText =sb.ToString();
         }
 
         private bool SuggestionEqualJValue(IJtSuggestion suggestion, JValue value)
@@ -88,13 +153,13 @@ namespace Aadev.JTF.Editor.EditorItems
                 return false;
             return Node switch
             {
-                JtByte _ => suggestion.GetValue<byte>().Equals((byte)value),
-                JtShort _ => suggestion.GetValue<short>().Equals((short)value),
-                JtInt _ => suggestion.GetValue<int>().Equals((int)value),
-                JtLong _ => suggestion.GetValue<long>().Equals((long)value),
-                JtFloat _ => suggestion.GetValue<float>().Equals((float)value),
-                JtDouble _ => suggestion.GetValue<double>().Equals((double)value),
-                JtString _ => suggestion.GetValue<string>().Equals((string?)value, StringComparison.Ordinal),
+                JtByteNode _ => suggestion.GetValue<byte>().Equals((byte)value),
+                JtShortNode _ => suggestion.GetValue<short>().Equals((short)value),
+                JtIntNode _ => suggestion.GetValue<int>().Equals((int)value),
+                JtLongNode _ => suggestion.GetValue<long>().Equals((long)value),
+                JtFloatNode _ => suggestion.GetValue<float>().Equals((float)value),
+                JtDoubleNode _ => suggestion.GetValue<double>().Equals((double)value),
+                JtStringNode _ => suggestion.GetValue<string>().Equals((string?)value, StringComparison.Ordinal),
                 _ => throw new Exception(),
             };
         }
@@ -104,17 +169,17 @@ namespace Aadev.JTF.Editor.EditorItems
                 return false;
             return Node switch
             {
-                JtByte jtByte => jtByte.Default.Equals((byte)value),
-                JtShort jtShort => jtShort.Default.Equals((short)value),
-                JtInt jtInt => jtInt.Default.Equals((int)value),
-                JtLong jtLong => jtLong.Default.Equals((long)value),
-                JtFloat jtFloat => jtFloat.Default.Equals((float)value),
-                JtDouble jtDouble => jtDouble.Default.Equals((double)value),
-                JtString jtString => jtString.Default.Equals((string?)value, StringComparison.Ordinal),
+                JtByteNode jtByte => jtByte.Default.Equals((byte)value),
+                JtShortNode jtShort => jtShort.Default.Equals((short)value),
+                JtIntNode jtInt => jtInt.Default.Equals((int)value),
+                JtLongNode jtLong => jtLong.Default.Equals((long)value),
+                JtFloatNode jtFloat => jtFloat.Default.Equals((float)value),
+                JtDoubleNode jtDouble => jtDouble.Default.Equals((double)value),
+                JtStringNode jtString => jtString.Default.Equals((string?)value, StringComparison.Ordinal),
                 _ => throw new Exception(),
             };
         }
-        private void CreateTextBox(bool doubleclick = false)
+        private void CreateTextBox(bool doubleClick = false)
         {
             if (IsInvalidValueType)
                 return;
@@ -125,46 +190,166 @@ namespace Aadev.JTF.Editor.EditorItems
             if (Parent is EditorItem parent && parent.SuspendFocus)
                 return;
 
-            if (!Node.Suggestions.IsEmpty)
+            if (Node.TryGetSuggestions() is null || Node.Suggestions.IsEmpty)
+            {
+                TextBox textBox = new TextBox
+                {
+                    Font = Font,
+                    BorderStyle = BorderStyle.None,
+                    BackColor = RootEditor.ColorTable.TextBoxBackColor,
+                    ForeColor = RootEditor.ColorTable.TextBoxForeColor,
+                    AutoSize = false,
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                    Width = Width - textBoxBounds.X - 20 - xRightOffset - 30,
+
+                    Text = Value.ToString(),
+                    ReadOnly = RootEditor.ReadOnly
+                };
+                textBox.Location = new Point(textBoxBounds.X + 10, 16 - textBox.Height / 2);
+
+
+                if (Node is JtStringNode strNode)
+                {
+                    if (strNode.MaxLength > 0)
+                        textBox.MaxLength = strNode.MaxLength;
+                    textBox.TextChanged += (sender, eventArgs) =>
+                    {
+                        Value = textBox.Text;
+                    };
+                    textBox.LostFocus += (sender, eventArgs) =>
+                    {
+                        Controls.Remove(textBox);
+                        valueBox = null;
+                        Invalidate();
+                    };
+                }
+                else
+                {
+                    textBox.KeyPress += (sender, e) =>
+                    {
+                        if (char.IsDigit(e.KeyChar) || char.IsControl(e.KeyChar))
+                            e.Handled = false;
+                        else if (e.KeyChar is '-' && !textBox.Text.Contains('-', StringComparison.Ordinal))
+                            e.Handled = false;
+                        else if (e.KeyChar == ',' && (Node is JtFloatNode or JtDoubleNode) && !textBox.Text.Contains(',', StringComparison.Ordinal))
+                            e.Handled = false;
+                        else if (e.KeyChar == 'e' && (Node is JtFloatNode or JtDoubleNode) && !textBox.Text.Contains('e', StringComparison.OrdinalIgnoreCase))
+                            e.Handled = false;
+                        else
+                            e.Handled = true;
+                    };
+                    textBox.TextChanged += (sender, e) =>
+                    {
+                        if (string.IsNullOrEmpty(textBox.Text))
+                        {
+                            JToken oldValue = Value;
+                            textBox.Text = Node.GetDefaultValue().ToString();
+                            textBox.SelectAll();
+                            ValidValue.Value = Node.GetDefaultValue();
+                            Invalidate();
+                            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, Value, this));
+                            return;
+                        }
+
+                        if (Node is JtByteNode jtByte)
+                        {
+                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                            {
+                                Value = (byte)BigInteger.Min(jtByte.Max, BigInteger.Max(jtByte.Min, b));
+                            }
+                        }
+                        else if (Node is JtShortNode jtShort)
+                        {
+                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                            {
+                                Value = (short)BigInteger.Min(jtShort.Max, BigInteger.Max(jtShort.Min, b));
+                            }
+                        }
+                        else if (Node is JtIntNode jtInt)
+                        {
+                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                            {
+                                Value = (int)BigInteger.Min(jtInt.Max, BigInteger.Max(jtInt.Min, b));
+                            }
+                        }
+                        else if (Node is JtLongNode jtLong)
+                        {
+                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
+                            {
+                                Value = (long)BigInteger.Min(jtLong.Max, BigInteger.Max(jtLong.Min, b));
+                            }
+                        }
+                        else if (Node is JtFloatNode jtFloat)
+                        {
+
+                            if (float.TryParse(textBox.Text, out float b))
+                                Value = MathF.Min(jtFloat.Max, MathF.Max(jtFloat.Min, b));
+                        }
+                        else if (Node is JtDoubleNode jtDouble)
+                        {
+                            if (double.TryParse(textBox.Text, out double b))
+                                Value = Math.Min(jtDouble.Max, Math.Max(jtDouble.Min, b));
+                        }
+                    };
+                    textBox.LostFocus += (sender, e) =>
+                    {
+                        if (textBox is null)
+                            return;
+                        Controls.Remove(textBox);
+                        valueBox = null;
+                        Invalidate();
+                    };
+                }
+
+
+
+
+                Controls.Add(textBox);
+                textBox?.Focus();
+                textBox?.SelectAll();
+                valueBox = textBox;
+
+            }
+            else
             {
                 IJtSuggestion[] suggestions = Node.Suggestions.GetSuggestions(GetDynamicSuggestions).ToArray();
 
-                if (suggestions.Length > RootEditor.MaximumSuggestionCountForComboBox || RootEditor.ReadOnly)
+                if (RootEditor.ReadOnly || Node.SuggestionsDisplayType is JtSuggestionsDisplayType.Window || (Node.SuggestionsDisplayType is JtSuggestionsDisplayType.Auto && suggestions.Length > RootEditor.MaximumSuggestionCountForComboBox))
                 {
-                    if (!doubleclick)
+                    if (!doubleClick)
                         return;
 
                     IJtSuggestion? currentSuggestion = suggestions.Where(x => SuggestionEqualJValue(x, ValidValue)).FirstOrDefault();
-                    if (currentSuggestion is null && !Node.ForecUsingSuggestions)
+                    if (currentSuggestion is null && !Node.ForceUsingSuggestions)
                     {
                         switch (Node)
                         {
-                            case JtByte:
+                            case JtByteNode:
                                 currentSuggestion = new DynamicSuggestion<byte>((byte)ValidValue);
                                 break;
-                            case JtShort:
+                            case JtShortNode:
                                 currentSuggestion = new DynamicSuggestion<short>((short)ValidValue);
                                 break;
-                            case JtInt:
+                            case JtIntNode:
                                 currentSuggestion = new DynamicSuggestion<int>((int)ValidValue);
                                 break;
-                            case JtLong:
+                            case JtLongNode:
                                 currentSuggestion = new DynamicSuggestion<long>((long)ValidValue);
                                 break;
-                            case JtFloat:
+                            case JtFloatNode:
                                 currentSuggestion = new DynamicSuggestion<float>((float)ValidValue);
                                 break;
-                            case JtDouble:
+                            case JtDoubleNode:
                                 currentSuggestion = new DynamicSuggestion<double>((double)ValidValue);
                                 break;
-                            case JtString:
+                            case JtStringNode:
                                 currentSuggestion = new DynamicSuggestion<string>((string?)ValidValue ?? string.Empty);
                                 break;
                             default:
                                 break;
                         }
                     }
-                    DialogResult dr = RootEditor.SuggestionSelector.Show(suggestions, Node.ForecUsingSuggestions || RootEditor.ReadOnly, currentSuggestion);
+                    DialogResult dr = RootEditor.SuggestionSelector.Show(suggestions, Node.ForceUsingSuggestions || RootEditor.ReadOnly, currentSuggestion);
 
                     if (dr == DialogResult.OK && !RootEditor.ReadOnly)
                     {
@@ -188,7 +373,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
 
                     comboBox.Location = new Point(xOffset + 10, 16 - comboBox.Height / 2 - 4);
-                    if (Node.ForecUsingSuggestions)
+                    if (Node.ForceUsingSuggestions)
                     {
                         comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
                     }
@@ -221,7 +406,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     };
 
 
-                    if (!Node.ForecUsingSuggestions)
+                    if (!Node.ForceUsingSuggestions)
                     {
                         comboBox.TextChanged += (sender, eventArgs) => Value = comboBox?.Text;
                     }
@@ -235,127 +420,6 @@ namespace Aadev.JTF.Editor.EditorItems
                     valueBox = comboBox;
                 }
             }
-            else
-            {
-                TextBox textBox = new TextBox
-                {
-                    Font = Font,
-                    BorderStyle = BorderStyle.None,
-                    BackColor = RootEditor.ColorTable.TextBoxBackColor,
-                    ForeColor = RootEditor.ColorTable.TextBoxForeColor,
-                    AutoSize = false,
-                    Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                    Width = Width - textBoxBounds.X - 20 - xRightOffset,
-
-                    Text = Value.ToString(),
-                    ReadOnly = RootEditor.ReadOnly
-                };
-                textBox.Location = new Point(textBoxBounds.X + 10, 16 - textBox.Height / 2);
-
-
-                if (Node is JtString strNode)
-                {
-                    if (strNode.MaxLength > 0)
-                        textBox.MaxLength = strNode.MaxLength;
-                    textBox.TextChanged += (sender, eventArgs) => Value = textBox.Text;
-                    textBox.LostFocus += (sender, eventArgs) =>
-                    {
-                        Controls.Remove(textBox);
-                        valueBox = null;
-                        Invalidate();
-                    };
-                }
-                else
-                {
-                    textBox.KeyPress += (s, e) =>
-                    {
-                        if (char.IsDigit(e.KeyChar) || char.IsControl(e.KeyChar))
-                            e.Handled = false;
-                        else if (e.KeyChar is '-' && !textBox.Text.Contains('-', StringComparison.Ordinal))
-                            e.Handled = false;
-                        else if (e.KeyChar == ',' && (Node is JtFloat or JtDouble) && !textBox.Text.Contains(',',StringComparison.Ordinal))
-                            e.Handled = false;
-                        else if (e.KeyChar == 'e' && (Node is JtFloat or JtDouble) && !textBox.Text.Contains('e', StringComparison.OrdinalIgnoreCase))
-                            e.Handled = false;
-                        else
-                            e.Handled = true;
-                    };
-                    textBox.TextChanged += (s, e) =>
-                    {
-                        if (textBox is null)
-                            return;
-                        if (string.IsNullOrEmpty(textBox.Text))
-                        {
-                            JToken oldValue = Value;
-                            textBox.Text = Node.GetDefaultValue().ToString();
-                            textBox.SelectAll();
-                            ValidValue.Value = Node.GetDefaultValue();
-                            Invalidate();
-                            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, Value, this));
-                            return;
-                        }
-                        if (Node is JtByte jtByte)
-                        {
-                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
-                            {
-                                Value = (byte)BigInteger.Min(jtByte.Max, BigInteger.Max(jtByte.Min, b));
-                            }
-                        }
-                        else if (Node is JtShort jtShort)
-                        {
-                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
-                            {
-                                Value = (short)BigInteger.Min(jtShort.Max, BigInteger.Max(jtShort.Min, b));
-                            }
-                        }
-                        else if (Node is JtInt jtInt)
-                        {
-                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
-                            {
-                                Value = (int)BigInteger.Min(jtInt.Max, BigInteger.Max(jtInt.Min, b));
-                            }
-                        }
-                        else if (Node is JtLong jtLong)
-                        {
-                            if (BigInteger.TryParse(textBox.Text, out BigInteger b))
-                            {
-                                Value = (long)BigInteger.Min(jtLong.Max, BigInteger.Max(jtLong.Min, b));
-                            }
-                        }
-                        else if (Node is JtFloat jtFloat)
-                        {
-
-                            if (float.TryParse(textBox.Text, out float b))
-                                Value = MathF.Min(jtFloat.Max, MathF.Max(jtFloat.Min, b));
-                        }
-                        else if (Node is JtDouble jtDouble)
-                        {
-                            if (double.TryParse(textBox.Text, out double b))
-                                Value = Math.Min(jtDouble.Max, Math.Max(jtDouble.Min, b));
-                        }
-
-
-
-                    };
-                    textBox.LostFocus += (sender, e) =>
-                    {
-                        if (textBox is null)
-                            return;
-                        Controls.Remove(textBox);
-                        valueBox = null;
-                        Invalidate();
-                    };
-                }
-
-
-
-
-                Controls.Add(textBox);
-                textBox?.Focus();
-                textBox?.SelectAll();
-                valueBox = textBox;
-
-            }
         }
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -363,12 +427,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (IsInvalidValueType)
                 return;
-            if (InvalidValue && Node.ForecUsingSuggestions)
+
+            Graphics g = e.Graphics;
+
+            if (InvalidValue && Node.ForceUsingSuggestions)
             {
                 string message = string.Format(CultureInfo.CurrentCulture, Properties.Resources.InvalidValue, value.ToString());
 
-                SizeF sf = e.Graphics.MeasureString(message, Font);
-                e.Graphics.DrawString(message, Font, RootEditor.ColorTable.InvalidValueBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
+                SizeF sf = g.MeasureString(message, Font);
+                g.DrawString(message, Font, RootEditor.ColorTable.InvalidValueBrush, new PointF(xOffset + 10, 16 - sf.Height / 2));
 
                 xOffset += (int)sf.Width + 10;
 
@@ -377,11 +444,11 @@ namespace Aadev.JTF.Editor.EditorItems
                 string discardMessage = Properties.Resources.DiscardInvalidValue;
 
 
-                SizeF dsf = e.Graphics.MeasureString(discardMessage, Font);
+                SizeF dsf = g.MeasureString(discardMessage, Font);
 
                 discardInvalidValueButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
-                e.Graphics.FillRectangle(RootEditor.ColorTable.DiscardInvalidValueButtonBackBrush, discardInvalidValueButtonBounds);
-                e.Graphics.DrawString(discardMessage, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - dsf.Height / 2);
+                g.FillRectangle(RootEditor.ColorTable.DiscardInvalidValueButtonBackBrush, discardInvalidValueButtonBounds);
+                g.DrawString(discardMessage, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - dsf.Height / 2);
 
 
 
@@ -391,36 +458,47 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             }
 
+            if (!IsEqualToDefaultValue() && !Node.IsArrayPrefab)
+            {
+                int width = IsFocused ? 29 : 30;
+                restoreDefaultValueButtonBounds = new Rectangle(Width - xRightOffset - width, yOffset, width, innerHeight);
 
+                g.FillRectangle(RootEditor.ColorTable.RestoreDefaultValueButtonBackBrush, restoreDefaultValueButtonBounds);
+
+                g.DrawLine(RootEditor.ColorTable.RestoreDefaultValueButtonForePen, Width - xRightOffset - width + 8, 16, Width - xRightOffset - 8, 16);
+
+
+                xRightOffset += width;
+            }
 
 
             textBoxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
-            e.Graphics.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, textBoxBounds);
+            g.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, textBoxBounds);
 
             if (valueBox is null)
             {
-                if ((!Node.Suggestions.IsEmpty) && ValidValue.Value is not null)
+                if (!(Node.TryGetSuggestions() is null || Node.Suggestions.IsEmpty) && ValidValue.Value is not null)
                 {
-                    foreach (IJtSuggestion item in Node.Suggestions.GetSuggestions(RootEditor.GetDynamicSource!))
+                    foreach (IJtSuggestion item in Node.Suggestions.GetSuggestions(RootEditor.DynamicSuggestionsSource!))
                     {
                         if (!SuggestionEqualJValue(item, ValidValue))
                             continue;
 
-                        SizeF s = e.Graphics.MeasureString(item.DisplayName, Font);
+                        SizeF s = g.MeasureString(item.DisplayName, Font);
 
                         SolidBrush brush2;
 
                         if (InvalidValue)
                         {
-                            if (Node.ForecUsingSuggestions)
+                            if (Node.ForceUsingSuggestions)
                                 brush2 = RootEditor.ColorTable.InvalidValueBrush;
                             else
-                                brush2 = RootEditor.ColorTable.WarinigValueBrush;
+                                brush2 = RootEditor.ColorTable.WarningValueBrush;
                         }
                         else
                             brush2 = RootEditor.ColorTable.TextBoxForeBrush;
 
-                        e.Graphics.DrawString(item.DisplayName, Font, brush2, new PointF(xOffset + 10, 16 - s.Height / 2));
+                        g.DrawString(item.DisplayName, Font, brush2, new PointF(xOffset + 10, 16 - s.Height / 2));
                         return;
                     }
                 }
@@ -428,18 +506,19 @@ namespace Aadev.JTF.Editor.EditorItems
 
                 if (InvalidValue)
                 {
-                    if (Node.ForecUsingSuggestions)
+                    if (Node.ForceUsingSuggestions)
                         brush = RootEditor.ColorTable.InvalidValueBrush;
                     else
-                        brush = RootEditor.ColorTable.WarinigValueBrush;
+                        brush = RootEditor.ColorTable.WarningValueBrush;
                 }
                 else
                     brush = RootEditor.ColorTable.TextBoxForeBrush;
 
+                string? displayValue = Node.GetDisplayString(Value);
 
-                SizeF sf = e.Graphics.MeasureString(Value.ToString(), Font);
+                SizeF sf = g.MeasureString(displayValue, Font);
 
-                e.Graphics.DrawString(Value.ToString(), Font, brush, new PointF(xOffset + 10, 16 - sf.Height / 2));
+                g.DrawString(displayValue, Font, brush, new PointF(xOffset + 10, 16 - sf.Height / 2));
             }
         }
         protected override void OnMouseClick(MouseEventArgs e)
@@ -457,6 +536,21 @@ namespace Aadev.JTF.Editor.EditorItems
             if (discardInvalidValueButtonBounds.Contains(e.Location))
             {
                 CreateValue();
+                Invalidate();
+                return;
+            }
+            if (restoreDefaultValueButtonBounds.Contains(e.Location))
+            {
+                if(valueBox is not null)
+                {
+                    Parent?.Focus();
+                    Controls.Remove(valueBox);
+                    valueBox = null;
+                    Focus();
+
+                }
+                CreateValue();
+
                 Invalidate();
                 return;
             }
@@ -479,25 +573,25 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
             if (textBoxBounds.Contains(e.Location))
             {
-                if (Node.Suggestions.IsEmpty)
+                if (Node.TryGetSuggestions() is null || Node.Suggestions.IsEmpty)
                     Cursor = Cursors.IBeam;
                 else
                     Cursor = Cursors.Hand;
                 return;
             }
-            if (discardInvalidValueButtonBounds.Contains(e.Location) && !RootEditor.ReadOnly)
+            if ((discardInvalidValueButtonBounds.Contains(e.Location) || restoreDefaultValueButtonBounds.Contains(e.Location)) && !RootEditor.ReadOnly)
             {
                 Cursor = Cursors.Hand;
                 return;
             }
         }
 
-        
+
         private IEnumerable<IJtSuggestion> GetDynamicSuggestions(JtIdentifier id)
         {
-            if (id.Identifier?.StartsWith("jtf:", StringComparison.OrdinalIgnoreCase) is true && Node is JtString)
+            if (id.Value?.StartsWith("jtf:", StringComparison.OrdinalIgnoreCase) is true && Node is JtStringNode)
             {
-                ReadOnlySpan<char> nodeId = id.Identifier.AsSpan(4);
+                ReadOnlySpan<char> nodeId = id.Value.AsSpan(4);
 
                 ChangedEvent? ce = eventManager.GetEvent(nodeId.ToString());
                 if (ce is null)
@@ -510,7 +604,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             else
             {
-                return RootEditor.GetDynamicSource?.Invoke(id) ?? Enumerable.Empty<IJtSuggestion>();
+                return RootEditor.DynamicSuggestionsSource?.Invoke(id) ?? Enumerable.Empty<IJtSuggestion>();
             }
 
             static IEnumerable<IJtSuggestion> CreateSuggestionsFromObject(JObject obj)

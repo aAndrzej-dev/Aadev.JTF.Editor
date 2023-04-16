@@ -13,7 +13,8 @@ namespace Aadev.JTF.Editor
         {
             Span<JtNode> array = identifiersManager.GetRegisteredNodes();
 
-            changedEvents = new List<ChangedEvent>();
+
+            changedEvents = new List<ChangedEvent>(array.Length);
             for (int i = 0; i < array.Length; i++)
             {
                 changedEvents.Add(new ChangedEvent(array[i].Id!));
@@ -31,6 +32,7 @@ namespace Aadev.JTF.Editor
                 if (changedEventsSpan[i].Id == e.Id)
                 {
                     changedEvents.RemoveAt(i);
+                    return;
                 }
             }
         }
@@ -39,8 +41,10 @@ namespace Aadev.JTF.Editor
 
         public ChangedEvent? GetEvent(JtIdentifier id)
         {
-            foreach (ChangedEvent? item in changedEvents)
+            Span<ChangedEvent> changedEventsSpan = CollectionsMarshal.AsSpan(changedEvents);
+            for (int i = 0; i < changedEventsSpan.Length; i++)
             {
+                ChangedEvent? item = changedEventsSpan[i];
                 if (item.Id == id)
                     return item;
             }
@@ -52,6 +56,7 @@ namespace Aadev.JTF.Editor
         private JToken? value;
         public JtIdentifier Id { get; }
         public JToken? Value { get => value; set { this.value = value; Event?.Invoke(this, EventArgs.Empty); } }
+
         public event EventHandler? Event;
 
         public ChangedEvent(JtIdentifier id)

@@ -206,6 +206,15 @@ namespace Aadev.JTF.Editor.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to False.
+        /// </summary>
+        internal static string FalseValue {
+            get {
+                return ResourceManager.GetString("FalseValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Invalid value: &apos;{0}&apos;.
         /// </summary>
         internal static string InvalidValue {
@@ -230,6 +239,15 @@ namespace Aadev.JTF.Editor.Properties {
             get {
                 object obj = ResourceManager.GetObject("None", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to True.
+        /// </summary>
+        internal static string TrueValue {
+            get {
+                return ResourceManager.GetString("TrueValue", resourceCulture);
             }
         }
         

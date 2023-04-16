@@ -23,12 +23,12 @@ namespace Aadev.JTF.Editor
             reversedAction = reversed;
             OldValue = reversed.NewValue;
             NewValue = reversed.OldValue;
-            if (reversed.Type is JtEditorActionType.AddToken)
-                Type = JtEditorActionType.RemoveToken;
-            else if (reversed.Type is JtEditorActionType.RemoveToken)
-                Type = JtEditorActionType.AddToken;
-            else
-                Type = reversed.Type;
+            Type = reversed.Type switch
+            {
+                JtEditorActionType.AddToken => JtEditorActionType.RemoveToken,
+                JtEditorActionType.RemoveToken => JtEditorActionType.AddToken,
+                _ => reversed.Type,
+            };
             Invoker = reversed.Invoker;
         }
         public JtfEditorAction Reverse()

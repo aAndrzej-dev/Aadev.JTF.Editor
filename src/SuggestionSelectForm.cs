@@ -17,13 +17,13 @@ namespace Aadev.JTF.Editor
 
         public IJtSuggestion? SelectedSuggestion { get; set; }
 
-        private IJtSuggestion? orginalSuggestion;
+        private IJtSuggestion? originalSuggestion;
 
         private IJtSuggestion[]? suggestions;
         private bool forceUsingSuggestion;
         public DialogResult Show(IJtSuggestion[] suggestions, bool forceUsingSuggestion, IJtSuggestion? selectedSuggestion = null)
         {
-            orginalSuggestion = selectedSuggestion;
+            originalSuggestion = selectedSuggestion;
             this.suggestions = suggestions;
             this.forceUsingSuggestion = forceUsingSuggestion;
             listBox.Items.Clear();
@@ -67,9 +67,13 @@ namespace Aadev.JTF.Editor
             if (!forceUsingSuggestion)
             {
                 if (!s.Any(x => x.StringValue == textBox.Text))
-                    listBox.Items.Add(new DynamicSuggestion<string>(textBox.Text));
-                if (!suggestions!.Contains(orginalSuggestion) && orginalSuggestion?.StringValue != textBox.Text)
-                    listBox.Items.Add(orginalSuggestion!);
+                {
+                    int i = listBox.Items.Add(new DynamicSuggestion<string>(textBox.Text));
+                    if (!string.IsNullOrEmpty(textBox.Text))
+                        selectedItem = listBox.Items[i];
+                }
+                if (!suggestions!.Contains(originalSuggestion) && originalSuggestion?.StringValue != textBox.Text)
+                    listBox.Items.Add(originalSuggestion!);
             }
 
             listBox.Items.AddRange(s);
@@ -97,7 +101,7 @@ namespace Aadev.JTF.Editor
                 using SolidBrush brush = new SolidBrush(SystemColors.Highlight);
                 g.FillRectangle(brush, e.Bounds);
             }
-            else if (orginalSuggestion == listBox.Items[e.Index])
+            else if (originalSuggestion == listBox.Items[e.Index])
             {
                 using SolidBrush brush = new SolidBrush(Color.ForestGreen);
                 g.FillRectangle(brush, e.Bounds);
@@ -161,9 +165,11 @@ namespace Aadev.JTF.Editor
     {
         public Type SuggestionType => typeof(TSuggestion);
 
-        public string? DisplayName { get => StringValue; set { } }
+        public string? DisplayName { get => StringValue; set => throw new NotSupportedException(); }
 
         public string? StringValue => value?.ToString();
+
+        public bool IsReadOnly => true;
 
         private readonly TSuggestion value;
 
@@ -173,9 +179,14 @@ namespace Aadev.JTF.Editor
         }
 
         public override string? ToString() => StringValue;
-        public T GetValue<T>() => throw new NotImplementedException();
+        public T GetValue<T>()
+        {
+            if (value is T tValue)
+                return tValue;
+            throw new InvalidCastException($"Cannot convert {typeof(T)} to {typeof(TSuggestion)}");
+        }
         public object? GetValue() => value;
-        public void SetValue<T>(T value) => throw new NotImplementedException();
-        public void SetValue(object? value) => throw new NotImplementedException();
+        public void SetValue<T>(T value) => throw new NotSupportedException();
+        public void SetValue(object? value) => throw new NotSupportedException();
     }
 }

@@ -22,7 +22,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private ContextMenuStrip? cmsPrefabSelect;
         private JtNode? singlePrefab;
         public JContainer? ValidValue => Value as JContainer;
-        private new JtArray Node => (JtArray)base.Node;
+        private new JtArrayNode Node => (JtArrayNode)base.Node;
         public override JToken Value
         {
             get => value;
@@ -34,12 +34,12 @@ namespace Aadev.JTF.Editor.EditorItems
                 OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, value, this));
             }
         }
-        [MemberNotNullWhen(false, "ValidValue")] public new bool IsInvalidValueType => base.IsInvalidValueType;
+        [MemberNotNullWhen(false, nameof(ValidValue))] public new bool IsInvalidValueType => base.IsInvalidValueType;
 
-        internal override bool IsSaveable => base.IsSaveable || (!IsInvalidValueType && ValidValue.Count > 0);
+        internal override bool IsSavable => base.IsSavable || (!IsInvalidValueType && ValidValue.Count > 0);
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
 
-        internal ArrayEditorItem(JtArray type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
+        internal ArrayEditorItem(JtArrayNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
         {
             SetStyle(ControlStyles.ContainerControl, true);
 
@@ -110,7 +110,8 @@ namespace Aadev.JTF.Editor.EditorItems
 
             }
 
-            Height = y = oy + 10;
+            y = oy + 10;
+            Height = y;
             ResumeLayout();
         }
         private void LoadAsArray()
@@ -125,12 +126,12 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
         }
-        private bool CheckPrefab(JtNode prefab, JToken value)
+        private static bool CheckPrefab(JtNode prefab, JToken value)
         {
             if (prefab.JsonType != value.Type)
                 return false;
 
-            if (prefab is JtBlock b && b.JsonType is JTokenType.Object)
+            if (prefab is JtBlockNode b && b.JsonType is JTokenType.Object)
             {
                 foreach (JProperty item in ((JObject)value).Properties())
                 {
@@ -275,7 +276,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 if (sender is not EditorItem bei)
                     return;
                 int oy = bei.Top + bei.Height + 5;
-                foreach (EditorItem control in Controls.Cast<Control>().Where(x => x.Top > bei.Top && x is EditorItem))
+                foreach (Control control in Controls.Cast<Control>().Where(x => x.Top > bei.Top && x is EditorItem))
                 {
                     if (control.Top != oy)
                         control.Top = oy;
@@ -283,7 +284,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     oy += 5;
 
                 }
-                Height = oy + 10;
+                Height = y = oy + 10;
             };
 
 
@@ -396,7 +397,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        internal JtNode? SinglePrefab { get => singlePrefab; }
+        internal JtNode? SinglePrefab => singlePrefab;
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -434,6 +435,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 xRightOffset += addWidth;
 
             }
+
 
 
             string msg;
@@ -517,7 +519,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (cmsPrefabSelect is not null || Node.Prefabs.Nodes!.Count <= 1)
                 return;
             cmsPrefabSelect = new ContextMenuStrip();
-            Span<JtNode> collectionSpan = CollectionsMarshal.AsSpan(Node.Prefabs.Nodes);
+            Span<JtNode> collectionSpan = CollectionsMarshal.AsSpan(Node.Prefabs.Nodes!);
             for (int i = 0; i < collectionSpan.Length; i++)
             {
                 JtNode? item = collectionSpan[i];
@@ -671,8 +673,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
 
         }
-
-
     }
 
 }

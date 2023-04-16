@@ -12,7 +12,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private Rectangle falsePanelRect = Rectangle.Empty;
         private Rectangle truePanelRect = Rectangle.Empty;
 
-        internal override bool IsSaveable => base.IsSaveable || (Value.Type != JTokenType.Null && (bool?)Value != Node.Default);
+        internal override bool IsSavable => base.IsSavable || (Value.Type != JTokenType.Null && (bool?)Value != Node.Default);
         private bool? RawValue
         {
             get => value.Type == Node.JsonType ? ((bool?)value ?? Node.Default) : (value.Type is JTokenType.Null ? Node.Default : null);
@@ -33,9 +33,9 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        private new JtBool Node => (JtBool)base.Node;
+        private new JtBoolNode Node => (JtBoolNode)base.Node;
 
-        internal BoolEditorItem(JtBool type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
+        internal BoolEditorItem(JtBoolNode type, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(type, token, jsonJtfEditor, eventManager)
         {
             value ??= Node.CreateDefaultValue();
         }
@@ -79,15 +79,15 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (!falsePanelRect.IsEmpty)
             {
-                SizeF falseLabelSize = g.MeasureString("False", Font);
+                SizeF falseLabelSize = g.MeasureString(Properties.Resources.FalseValue, Font);
 
-                g.DrawString("False", Font, (RawValue ?? Node.Default) ? ForeColorBrush : RootEditor.ColorTable.FalseValueForeBrush, falsePanelRect.X + falsePanelRect.Width / 2 - falseLabelSize.Width / 2, falsePanelRect.Y + falsePanelRect.Height / 2 - falseLabelSize.Height / 2);
+                g.DrawString(Properties.Resources.FalseValue, Font, (RawValue ?? Node.Default) ? ForeColorBrush : RootEditor.ColorTable.FalseValueForeBrush, falsePanelRect.X + falsePanelRect.Width / 2 - falseLabelSize.Width / 2, falsePanelRect.Y + falsePanelRect.Height / 2 - falseLabelSize.Height / 2);
             }
             if (!truePanelRect.IsEmpty)
             {
-                SizeF trueLabelSize = g.MeasureString("True", Font);
+                SizeF trueLabelSize = g.MeasureString(Properties.Resources.TrueValue, Font);
 
-                g.DrawString("True", Font, (RawValue ?? Node.Default) ? RootEditor.ColorTable.TrueValueForeBrush : ForeColorBrush, truePanelRect.X + truePanelRect.Width / 2 - trueLabelSize.Width / 2, truePanelRect.Y + truePanelRect.Height / 2 - trueLabelSize.Height / 2);
+                g.DrawString(Properties.Resources.TrueValue, Font, (RawValue ?? Node.Default) ? RootEditor.ColorTable.TrueValueForeBrush : ForeColorBrush, truePanelRect.X + truePanelRect.Width / 2 - trueLabelSize.Width / 2, truePanelRect.Y + truePanelRect.Height / 2 - trueLabelSize.Height / 2);
             }
 
 

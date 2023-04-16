@@ -1,4 +1,5 @@
 ﻿using Aadev.JTF.Editor.EditorItems;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -12,24 +13,24 @@ namespace Aadev.JTF.Editor
     public partial class JsonJtfEditor : UserControl
     {
         private JTemplate? template;
-        private Func<JtIdentifier, IEnumerable<IJtSuggestion>>? getDynamicSource;
+        private Func<JtIdentifier, IEnumerable<IJtSuggestion>>? dynamicSuggestionsSource;
         private JToken? value;
 
 
         public event EventHandler? ValueChanged;
         public JtColorTable ColorTable { get; set; } = JtColorTable.Default;
 
-        public Func<JtIdentifier, IEnumerable<IJtSuggestion>>? GetDynamicSource { get => getDynamicSource; set { getDynamicSource = value; OnTemplateChanged(); } }
+        public Func<JtIdentifier, IEnumerable<IJtSuggestion>>? DynamicSuggestionsSource { get => dynamicSuggestionsSource; set { dynamicSuggestionsSource = value; OnTemplateChanged(); } }
+
 
 
         public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
         public JToken? Value { get => value; set { this.value = value; OnTemplateChanged(); } }
 
-        //public string? Filename { get => filename; set { filename = value; OnTemplateChanged(); } }
         public bool ReadOnly { get; set; }
         public bool ShowEmptyNodesInReadOnlyMode { get; set; }
         internal bool DisableScrollingToControl { get; set; }
-
+        public bool ShowAdvancedToolTip { get; set; }
 
         public bool NormalizeTwinNodeOrder { get; set; }
 
@@ -119,8 +120,18 @@ namespace Aadev.JTF.Editor
             }
             return rootEditorItem;
         }
-        public void Save(string filename, Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None) => File.WriteAllText(filename!, value!.ToString(formatting));
-        
+        public void Save(string filename, Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None)
+        {
+            using StreamWriter sr = new StreamWriter(filename);
+            using JsonWriter jw = new JsonTextWriter(sr);
+
+            jw.Formatting = formatting;
+
+            value!.WriteTo(jw);
+
+            jw.Close();
+        }
+
         protected override Point ScrollToControl(Control activeControl) => DisableScrollingToControl ? AutoScrollPosition : base.ScrollToControl(activeControl);
     }
 }

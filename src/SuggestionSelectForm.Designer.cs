@@ -28,64 +28,61 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.textBox = new System.Windows.Forms.TextBox();
-            this.listBox = new System.Windows.Forms.ListBox();
-            this.SuspendLayout();
+            textBox = new System.Windows.Forms.TextBox();
+            listBox = new System.Windows.Forms.ListBox();
+            SuspendLayout();
             // 
             // textBox
             // 
-            this.textBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
-            this.textBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.textBox.ForeColor = System.Drawing.Color.White;
-            this.textBox.HideSelection = false;
-            this.textBox.Location = new System.Drawing.Point(12, 12);
-            this.textBox.Name = "textBox";
-            this.textBox.Size = new System.Drawing.Size(776, 25);
-            this.textBox.TabIndex = 0;
-            this.textBox.TextChanged += new System.EventHandler(this.TextBox_TextChanged);
+            textBox.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            textBox.BackColor = System.Drawing.Color.FromArgb(50, 50, 50);
+            textBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            textBox.ForeColor = System.Drawing.Color.White;
+            textBox.HideSelection = false;
+            textBox.Location = new System.Drawing.Point(12, 12);
+            textBox.Name = "textBox";
+            textBox.Size = new System.Drawing.Size(781, 25);
+            textBox.TabIndex = 0;
+            textBox.TextChanged += TextBox_TextChanged;
             // 
             // listBox
             // 
-            this.listBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.listBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
-            this.listBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.listBox.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
-            this.listBox.ForeColor = System.Drawing.Color.White;
-            this.listBox.FormattingEnabled = true;
-            this.listBox.ItemHeight = 24;
-            this.listBox.Location = new System.Drawing.Point(12, 43);
-            this.listBox.Name = "listBox";
-            this.listBox.Size = new System.Drawing.Size(776, 495);
-            this.listBox.TabIndex = 1;
-            this.listBox.DrawItem += new System.Windows.Forms.DrawItemEventHandler(this.ListBox_DrawItem);
-            this.listBox.SelectedIndexChanged += new System.EventHandler(this.ListBox_SelectedIndexChanged);
-            this.listBox.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.ListBox_MouseDoubleClick);
+            listBox.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            listBox.BackColor = System.Drawing.Color.FromArgb(50, 50, 50);
+            listBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            listBox.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
+            listBox.ForeColor = System.Drawing.Color.White;
+            listBox.FormattingEnabled = true;
+            listBox.ItemHeight = 24;
+            listBox.Location = new System.Drawing.Point(12, 43);
+            listBox.Name = "listBox";
+            listBox.Size = new System.Drawing.Size(781, 480);
+            listBox.TabIndex = 1;
+            listBox.DrawItem += ListBox_DrawItem;
+            listBox.SelectedIndexChanged += ListBox_SelectedIndexChanged;
+            listBox.MouseDoubleClick += ListBox_MouseDoubleClick;
             // 
             // SuggestionSelectForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
-            this.ClientSize = new System.Drawing.Size(800, 561);
-            this.Controls.Add(this.listBox);
-            this.Controls.Add(this.textBox);
-            this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.ForeColor = System.Drawing.Color.White;
-            this.KeyPreview = true;
-            this.MinimizeBox = false;
-            this.Name = "SuggestionSelectForm";
-            this.ShowIcon = false;
-            this.ShowInTaskbar = false;
-            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;
-            this.Text = "Select Value";
-            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.SuggestionSelectForm_KeyDown);
-            this.ResumeLayout(false);
-            this.PerformLayout();
-
+            AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            BackColor = System.Drawing.Color.FromArgb(30, 30, 30);
+            ClientSize = new System.Drawing.Size(805, 546);
+            Controls.Add(listBox);
+            Controls.Add(textBox);
+            Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            ForeColor = System.Drawing.Color.White;
+            KeyPreview = true;
+            MinimizeBox = false;
+            Name = "SuggestionSelectForm";
+            ShowIcon = false;
+            ShowInTaskbar = false;
+            SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            Text = "Select Value";
+            KeyDown += SuggestionSelectForm_KeyDown;
+            ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion

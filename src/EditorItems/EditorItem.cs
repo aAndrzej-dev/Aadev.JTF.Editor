@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 
@@ -15,7 +16,7 @@ namespace Aadev.JTF.Editor.EditorItems
     internal abstract partial class EditorItem : UserControl, IJsonItem
     {
         private readonly JtNode[] twinsFamily;
-        private readonly string toolTipText;
+        protected string toolTipText;
         private string? dynamicName;
         private int oldHeight;
         private bool expanded;
@@ -39,7 +40,7 @@ namespace Aadev.JTF.Editor.EditorItems
         protected virtual bool IsFocused => Focused || txtDynamicName?.Focused is true;
         protected JsonJtfEditor RootEditor { get; }
         protected SolidBrush ForeColorBrush { get; private set; }
-        protected bool CanCollapse => Node is JtContainer c && !c.DisableCollapse;
+        protected bool CanCollapse => Node is JtContainerNode c && !c.DisableCollapse;
         protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; RootEditor.DisableScrollingToControl = true; SuspendFocus = true; OnExpandChanged(); SuspendFocus = false; RootEditor.DisableScrollingToControl = false; } }
         protected virtual Color BorderColor
         {
@@ -50,14 +51,14 @@ namespace Aadev.JTF.Editor.EditorItems
                 else if (Parent is ArrayEditorItem aei && aei.SinglePrefab is not null && aei.SinglePrefab != Node)
                     return RootEditor.ColorTable.WarningBorderColor;
                 else if (IsFocused)
-                    return RootEditor.ColorTable.AcitveBorderColor;
+                    return RootEditor.ColorTable.ActiveBorderColor;
                 else
-                    return RootEditor.ColorTable.InacitveBorderColor;
+                    return RootEditor.ColorTable.InactiveBorderColor;
             }
         }
 
         internal int ArrayIndex { get; set; } = -1;
-        internal virtual bool IsSaveable => Node.Required || Node.Parent?.Owner is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array } || Node.IsRoot || Node.IsArrayPrefab;
+        internal virtual bool IsSavable => Node.Required || Node.Parent?.Owner is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array } || Node.IsRoot || Node.IsArrayPrefab;
         internal bool SuspendFocus { get; private set; }
 
         public JtNode Node { get; }
@@ -227,7 +228,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 xOffset = 2;
                 xRightOffset = 2;
                 yOffset = 2;
-                if (Expanded && Node is JtContainer)
+                if (Expanded && Node is JtContainerNode)
                     innerHeight = 29;
                 else
                     innerHeight = 28;
@@ -271,7 +272,7 @@ namespace Aadev.JTF.Editor.EditorItems
                 return;
 
 
-            if (Node is JtContainer)
+            if (Node is JtContainerNode)
             {
                 dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
                 g.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, dynamicNameTextboxBounds);
@@ -314,7 +315,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             int width = IsFocused ? 29 : 30;
             removeButtonBounds = new Rectangle(Width - xRightOffset - width, yOffset, width, innerHeight);
-            if (Expanded && !Node.IsDynamicName && Node is not JtArray)
+            if (Expanded && !Node.IsDynamicName && Node is not JtArrayNode)
             {
                 RectangleF bounds = new RectangleF(removeButtonBounds.Location, removeButtonBounds.Size);
                 g.SmoothingMode = SmoothingMode.HighQuality;
@@ -350,10 +351,9 @@ namespace Aadev.JTF.Editor.EditorItems
                     dn = ConvertToFriendlyName($"{ArrayIndex} ({Node.DisplayName})");
                 else
                     dn = ConvertToFriendlyName(Node.DisplayName);
-
                 SizeF nameSize = g.MeasureString(dn, Font);
 
-                g.DrawString(dn, Font, IsSaveable ? ForeColorBrush : RootEditor.ColorTable.DefaultElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
+                g.DrawString(dn, Font, IsSavable ? ForeColorBrush : RootEditor.ColorTable.DefaultElementForeBrush, new PointF(xOffset, 16 - nameSize.Height / 2));
                 xOffset += (int)nameSize.Width;
 
 
@@ -375,11 +375,11 @@ namespace Aadev.JTF.Editor.EditorItems
                 int x = xOffset;
                 xOffset += 10;
 
-                string arrind = ArrayIndex.ToString(CultureInfo.CurrentCulture);
+                string index = ArrayIndex.ToString(CultureInfo.CurrentCulture);
 
-                SizeF nameSize = g.MeasureString(arrind, Font);
+                SizeF nameSize = g.MeasureString(index, Font);
 
-                g.DrawString(arrind, Font, ForeColorBrush, new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
+                g.DrawString(index, Font, ForeColorBrush, new PointF(xOffset, 32 / 2 - nameSize.Height / 2));
 
                 xOffset += (int)nameSize.Width;
                 xOffset += 10;
@@ -388,7 +388,7 @@ namespace Aadev.JTF.Editor.EditorItems
             }
         }
 
-        private bool CanDrawExpandButton => Node is JtContainer && !IsInvalidValueType && CanCollapse && !(RootEditor.ReadOnly && !IsSaveable) && !Node.IsRoot;
+        private bool CanDrawExpandButton => Node is JtContainerNode && !IsInvalidValueType && CanCollapse && !(RootEditor.ReadOnly && !IsSavable) && !Node.IsRoot;
 
         public string Path => Parent is IJsonItem ji ? ji.Path + GetCurrentPathName() : GetCurrentPathName();
         private string GetCurrentPathName()
@@ -469,7 +469,7 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         private void DrawTypeIcons(Graphics g)
         {
-            bool rounded = Node is JtContainer && Expanded && (!CanCollapse || twinsFamily[^1] != Node || twinsFamily[0] != Node);
+            bool rounded = Node is JtContainerNode && Expanded && (!CanCollapse || twinsFamily[^1] != Node || twinsFamily[0] != Node);
 
 
             Span<JtNode> twinFamilySpan = twinsFamily;
@@ -554,7 +554,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (Node.IsRoot)
             {
                 Expanded = true;
-                if (Node is JtContainer { ContainerDisplayType: JtContainerType.Block } && !IsInvalidValueType && Node.Template.Roots.Count == 1)
+                if (Node is JtContainerNode { ContainerDisplayType: JtContainerType.Block } && !IsInvalidValueType && Node.Template.Roots.Count == 1)
                 {
                     xOffset = 0;
                     xRightOffset = 0;
@@ -563,7 +563,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     return;
                 }
             }
-            if (Node is JtContainer c && c.DisableCollapse)
+            if (Node is JtContainerNode c && c.DisableCollapse)
                 Expanded = true;
 
 
@@ -658,10 +658,9 @@ namespace Aadev.JTF.Editor.EditorItems
 
         }
 
-
         private void DeepExpand()
         {
-            if (Node is not JtContainer)
+            if (Node is not JtContainerNode)
                 return;
             SuspendFocus = true;
             foreach (object? item in Controls)
@@ -685,15 +684,6 @@ namespace Aadev.JTF.Editor.EditorItems
             }
             SuspendFocus = false;
         }
-#if DEBUG
-        protected override void OnMouseDoubleClick(MouseEventArgs e)
-        {
-            base.OnMouseDoubleClick(e);
-            string json = Node.GetJson();
-            Clipboard.SetText(json);
-            MessageBox.Show(json);
-        }
-#endif
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
@@ -707,7 +697,6 @@ namespace Aadev.JTF.Editor.EditorItems
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-
 
 
 
@@ -748,7 +737,7 @@ namespace Aadev.JTF.Editor.EditorItems
             if (IsInvalidValueType)
                 return;
 
-            if (Node is JtContainer && e.KeyCode == Keys.Space)
+            if (Node is JtContainerNode && e.KeyCode == Keys.Space)
             {
                 Expanded = !Expanded;
             }
@@ -789,13 +778,13 @@ namespace Aadev.JTF.Editor.EditorItems
         }
         public static EditorItem Create(JtNode node, JToken? token, JsonJtfEditor rootEditor, EventManager eventManager)
         {
-            if (node is JtBool boolNode)
+            if (node is JtBoolNode boolNode)
                 return new BoolEditorItem(boolNode, token, rootEditor, eventManager);
-            if (node is JtValue valueNode)
+            if (node is JtValueNode valueNode)
                 return new ValueEditorItem(valueNode, token, rootEditor, eventManager);
-            if (node is JtBlock blockNode)
+            if (node is JtBlockNode blockNode)
                 return new BlockEditorItem(blockNode, token, rootEditor, eventManager);
-            if (node is JtArray arrayNode)
+            if (node is JtArrayNode arrayNode)
                 return new ArrayEditorItem(arrayNode, token, rootEditor, eventManager);
             return new UnknownEditorItem(node, token, rootEditor, eventManager);
         }

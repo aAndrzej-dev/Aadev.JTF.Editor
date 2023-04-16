@@ -7,27 +7,32 @@
 	<AssemblyName>Aadev.JTF.Editor</AssemblyName>
 	<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 	<Authors>aAndrzej-dev</Authors>
-	<Copyright>Copyright © aAndrzej-dev 2022</Copyright>
+	<Copyright>Copyright © aAndrzej-dev 2023</Copyright>
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
 	<DebugType>none</DebugType>
 	<AssemblyVersion>2.0.0.0</AssemblyVersion>
 	<FileVersion>2.0.0.0</FileVersion>
-	<Version>2.0.0-beta2</Version>
+	<Version>2.0.0-beta3</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Added support for multiple prefabs of the same type
+    <PackageReleaseNotes>Addded resore default value button in every value editor item.
+Added AdvancedToolTip option to show more info in tool tip.
 Bug fixes and improvements</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
-	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</RepositoryUrl>
+	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor.git</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
+	<RepositoryBranch>main</RepositoryBranch>
+	<RepositoryCommit></RepositoryCommit>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
 	<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	<LangVersion>11.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0" />
-    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta2" />
+    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,5 +49,4 @@ Bug fixes and improvements</PackageReleaseNotes>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-	
 </Project>

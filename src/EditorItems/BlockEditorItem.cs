@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Windows.Forms;
@@ -14,7 +15,7 @@ namespace Aadev.JTF.Editor.EditorItems
         private FocusableControl? focusControl;
         private JToken value;
 
-        private new JtBlock Node => (JtBlock)base.Node;
+        private new JtBlockNode Node => (JtBlockNode)base.Node;
         public override JToken Value
         {
             get => value;
@@ -28,20 +29,24 @@ namespace Aadev.JTF.Editor.EditorItems
         }
 
         protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-        internal override bool IsSaveable => base.IsSaveable || (!IsInvalidValueType && ValidValue.Count > 0);
+        internal override bool IsSavable => base.IsSavable || (!IsInvalidValueType && ValidValue.Count > 0);
 
         public JContainer? ValidValue => Value as JContainer;
-        [MemberNotNullWhen(false, "ValidValue")] public new bool IsInvalidValueType => base.IsInvalidValueType;
+        [MemberNotNullWhen(false, nameof(ValidValue))] public new bool IsInvalidValueType => base.IsInvalidValueType;
 
         private bool suspendUpdatingLayout;
 
-        internal BlockEditorItem(JtBlock node, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(node, token, jsonJtfEditor, eventManager)
+        internal BlockEditorItem(JtBlockNode node, JToken? token, JsonJtfEditor jsonJtfEditor, EventManager eventManager) : base(node, token, jsonJtfEditor, eventManager)
         {
             value ??= (JContainer)Node.CreateDefaultValue();
 
             SetStyle(ControlStyles.ContainerControl, true);
 
-            childrenEventManager = node.HasExternalChildren ? new EventManager(node.Children.GetIdentifiersManagerForChild(), eventManager) : eventManager;
+
+            bool isExternal = node.IsExternal || node.HasExternalChildrenSource;
+       
+
+            childrenEventManager = isExternal ? new EventManager(node.Children.GetIdentifiersManagerForChild(), eventManager) : eventManager;
         }
 
         private void UpdateLayout()
@@ -81,7 +86,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             if (resizeOnCreate)
             {
-                if(node.Name is not null)
+                if (node.Name is not null)
                     value[node.Name] = null;
                 bei = Create(node, null, RootEditor, childrenEventManager);
             }
@@ -106,7 +111,7 @@ namespace Aadev.JTF.Editor.EditorItems
             bei.Location = new System.Drawing.Point(10, y);
             bei.Width = Width - 20;
 
-            if (bei.IsSaveable)
+            if (bei.IsSavable)
             {
                 if (Node.ContainerJsonType is JtContainerType.Block)
                     value[node.Name!] = bei.Value;
@@ -146,7 +151,7 @@ namespace Aadev.JTF.Editor.EditorItems
             {
                 if (sender is not EditorItem bei)
                     return;
-                if (bei.IsSaveable)
+                if (bei.IsSavable)
                 {
                     if (Node.ContainerJsonType is JtContainerType.Block)
                         value[node.Name!] = bei.Value;
@@ -289,7 +294,7 @@ namespace Aadev.JTF.Editor.EditorItems
 
             List<string> jsonNodes = new List<string>();
 
-            List<string> twins = new();
+            List<string> twins = new List<string>();
             int index = 0;
 
             if (Node.IsDynamicName)
@@ -297,7 +302,7 @@ namespace Aadev.JTF.Editor.EditorItems
             foreach (JtNode item in Node.Children.Nodes!)
             {
                 if (item.Name is null)
-                    continue;
+                    continue; //TODO: Crete node instead of skipping it
                 if (!jsonNodes.Contains(item.Name))
                     jsonNodes.Add(item.Name);
 
@@ -361,7 +366,7 @@ namespace Aadev.JTF.Editor.EditorItems
                     y += 32 + 5;
                 }
             }
-                
+
 
             Height = y + 5;
             ResumeLayout();
