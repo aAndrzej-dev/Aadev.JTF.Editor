@@ -11,14 +11,15 @@
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
 	<DebugType>none</DebugType>
-	<AssemblyVersion>2.0.0.0</AssemblyVersion>
-	<FileVersion>2.0.0.0</FileVersion>
-	<Version>2.0.0-beta3</Version>
+	<AssemblyVersion>2.0.0.4</AssemblyVersion>
+	<FileVersion>2.0.0.4</FileVersion>
+	<Version>2.0.0-beta4</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Addded resore default value button in every value editor item.
-Added AdvancedToolTip option to show more info in tool tip.
+    <PackageReleaseNotes>Event Managers are now create only when a node has id or condition to save memory
+Added intelligent suggestions by setting suggestions source to "$jtf_auto:{intelligent suggestion name}"
+Library is now signed with strong name
 Bug fixes and improvements</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor.git</RepositoryUrl>
@@ -27,13 +28,13 @@ Bug fixes and improvements</PackageReleaseNotes>
 	<RepositoryCommit></RepositoryCommit>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
 	<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-	<LangVersion>11.0</LangVersion>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.0" />
-    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta4" />
-  </ItemGroup>
+	  <LangVersion>11.0</LangVersion>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.1" />
+		<PackageReference Include="Aadev.JTF" Version="2.0.0-beta5" />
+	</ItemGroup>
 
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

@@ -1,68 +1,74 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json.Linq;
 
-namespace Aadev.JTF.Editor
+namespace Aadev.JTF.Editor;
+
+internal class EventManager
 {
-    internal class EventManager
+    private readonly List<ChangedEvent> changedEvents;
+    private readonly EventManager? parent;
+    public EventManager(IdentifiersManager identifiersManager, EventManager? parent)
     {
-        private readonly List<ChangedEvent> changedEvents;
-        private readonly EventManager? parent;
-        public EventManager(IIdentifiersManager identifiersManager, EventManager? parent)
+        Span<JtNode> array = identifiersManager.GetRegisteredNodes();
+
+
+        changedEvents = new List<ChangedEvent>(array.Length);
+        for (int i = 0; i < array.Length; i++)
         {
-            Span<JtNode> array = identifiersManager.GetRegisteredNodes();
-
-
-            changedEvents = new List<ChangedEvent>(array.Length);
-            for (int i = 0; i < array.Length; i++)
-            {
-                changedEvents.Add(new ChangedEvent(array[i].Id!));
-            }
-            identifiersManager.NodeRegistered += IdentifiersManager_NodeRegistered;
-            identifiersManager.NodeUnregistered += IdentifiersManager_NodeUnregistered;
-            this.parent = parent;
+            changedEvents.Add(new ChangedEvent(array[i].Id!));
         }
 
-        private void IdentifiersManager_NodeUnregistered(object? sender, NodeIdentifierEventArgs e)
-        {
-            Span<ChangedEvent> changedEventsSpan = CollectionsMarshal.AsSpan(changedEvents);
-            for (int i = 0; i < changedEventsSpan.Length; i++)
-            {
-                if (changedEventsSpan[i].Id == e.Id)
-                {
-                    changedEvents.RemoveAt(i);
-                    return;
-                }
-            }
-        }
+        identifiersManager.NodeRegistered += IdentifiersManager_NodeRegistered;
+        identifiersManager.NodeUnregistered += IdentifiersManager_NodeUnregistered;
+        this.parent = parent;
+    }
 
-        private void IdentifiersManager_NodeRegistered(object? sender, NodeIdentifierEventArgs e) => changedEvents.Add(new ChangedEvent(e.Id));
-
-        public ChangedEvent? GetEvent(JtIdentifier id)
+    private void IdentifiersManager_NodeUnregistered(object? sender, NodeIdentifierEventArgs e)
+    {
+        Span<ChangedEvent> changedEventsSpan = CollectionsMarshal.AsSpan(changedEvents);
+        for (int i = 0; i < changedEventsSpan.Length; i++)
         {
-            Span<ChangedEvent> changedEventsSpan = CollectionsMarshal.AsSpan(changedEvents);
-            for (int i = 0; i < changedEventsSpan.Length; i++)
+            if (changedEventsSpan[i].Id == e.Id)
             {
-                ChangedEvent? item = changedEventsSpan[i];
-                if (item.Id == id)
-                    return item;
+                changedEvents.RemoveAt(i);
+                return;
             }
-            return parent?.GetEvent(id);
         }
     }
-    internal class ChangedEvent
+
+    private void IdentifiersManager_NodeRegistered(object? sender, NodeIdentifierEventArgs e) => changedEvents.Add(new ChangedEvent(e.Id));
+
+    public ChangedEvent? GetEvent(JtIdentifier id)
     {
-        private JToken? value;
-        public JtIdentifier Id { get; }
-        public JToken? Value { get => value; set { this.value = value; Event?.Invoke(this, EventArgs.Empty); } }
-
-        public event EventHandler? Event;
-
-        public ChangedEvent(JtIdentifier id)
+        Span<ChangedEvent> changedEventsSpan = CollectionsMarshal.AsSpan(changedEvents);
+        for (int i = 0; i < changedEventsSpan.Length; i++)
         {
-            Id = id;
+            ChangedEvent? item = changedEventsSpan[i];
+            if (item.Id == id)
+                return item;
         }
-        public void Invoke(JToken? value) => Value = value;
+
+        return parent?.GetEvent(id);
     }
+}
+internal class ChangedEvent
+{
+    private JToken? value;
+    public JtIdentifier Id { get; }
+    public JToken? Value
+    {
+        get => value;
+        set { this.value = value; Event?.Invoke(this, EventArgs.Empty); }
+    }
+
+    public event EventHandler? Event;
+
+    public ChangedEvent(JtIdentifier id)
+    {
+        Id = id;
+
+    }
+    public void Invoke(JToken? value) => Value = value;
 }

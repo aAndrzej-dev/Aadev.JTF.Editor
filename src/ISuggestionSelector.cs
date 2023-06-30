@@ -1,10 +1,9 @@
 ﻿using System.Windows.Forms;
 
-namespace Aadev.JTF.Editor
+namespace Aadev.JTF.Editor;
+
+public interface ISuggestionSelector
 {
-    public interface ISuggestionSelector
-    {
-        DialogResult Show(IJtSuggestion[] suggestions, bool forceUsingSuggestion, IJtSuggestion? selectedSuggestion = null);
-        IJtSuggestion? SelectedSuggestion { get; set; }
-    }
+    DialogResult Show(IJtSuggestion[] suggestions, bool forceUsingSuggestion, IJtSuggestion? selectedSuggestion = null);
+    IJtSuggestion? SelectedSuggestion { get; set; }
 }

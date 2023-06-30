@@ -1,10 +1,9 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Aadev.JTF.Editor.EditorItems
+namespace Aadev.JTF.Editor.EditorItems;
+
+internal interface IJsonItem
 {
-    internal interface IJsonItem
-    {
-        JToken Value { get; }
-        string Path { get; }
-    }
+    JToken Value { get; }
+    string Path { get; }
 }
