@@ -4,8 +4,10 @@ using System.Runtime.InteropServices;
 using Newtonsoft.Json.Linq;
 
 namespace Aadev.JTF.Editor;
-
-internal class EventManager
+/// <summary>
+/// Event Managers are created for every <see cref="IdentifiersManager"/>
+/// </summary>
+public class EventManager
 {
     private readonly List<ChangedEvent> changedEvents;
     private readonly EventManager? parent;
@@ -53,7 +55,7 @@ internal class EventManager
         return parent?.GetEvent(id);
     }
 }
-internal class ChangedEvent
+public class ChangedEvent
 {
     private JToken? value;
     public JtIdentifier Id { get; }
@@ -68,7 +70,6 @@ internal class ChangedEvent
     public ChangedEvent(JtIdentifier id)
     {
         Id = id;
-
     }
     public void Invoke(JToken? value) => Value = value;
 }

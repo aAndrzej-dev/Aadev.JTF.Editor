@@ -1,54 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Aadev.JTF.Types;
+using Aadev.JTF.Editor.ViewModels;
+using Aadev.JTF.Nodes;
 using Newtonsoft.Json.Linq;
 
 namespace Aadev.JTF.Editor.EditorItems;
 
-internal sealed class BlockEditorItem : EditorItem
+internal sealed class BlockEditorItem : ContainerEditorItem
 {
-    private int y;
-    private FocusableControl? focusControl;
-    private JToken value;
-
-
-    private new JtBlockNode Node => (JtBlockNode)base.Node;
-    public override JToken Value
-    {
-        get => value;
-        set
-        {
-            JToken oldValue = this.value;
-            this.value = value;
-            Invalidate();
-            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, value, this));
-        }
-    }
-
-    protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-    internal override bool IsSavable => base.IsSavable || (!IsInvalidValueType && ValidValue.Count > 0);
-
-    public JContainer? ValidValue => Value as JContainer;
-    [MemberNotNullWhen(false, nameof(ValidValue))] public new bool IsInvalidValueType => base.IsInvalidValueType;
-
+    private Dictionary<JtNodeViewModel, EditorItem?>? childrenMap;
     private bool suspendUpdatingLayout;
 
-    internal BlockEditorItem(JtBlockNode node, JToken? token, JsonJtfEditor rootEditor, EventManagerContext eventManagerContext) : base(node, token, rootEditor, eventManagerContext)
-    {
-        value ??= (JContainer)Node.CreateDefaultValue();
+    public new JtBlockViewModel ViewModel => (JtBlockViewModel)base.ViewModel;
+    private new JtBlockNode Node => (JtBlockNode)base.Node;
 
-        SetStyle(ControlStyles.ContainerControl, true);
-    }
+    internal BlockEditorItem(JtBlockViewModel node, JsonJtfEditor rootEditor) : base(node, rootEditor) { }
 
     private void UpdateLayout()
     {
         if (suspendUpdatingLayout)
             return;
-
-
         SuspendLayout();
         int yOffset = (Node.IsRootChild && Node.Template.Roots.Count == 1) ? 10 : 38;
         foreach (Control ctr in Controls)
@@ -58,74 +33,24 @@ internal sealed class BlockEditorItem : EditorItem
             if (ctr.Top != yOffset)
                 ctr.Top = yOffset;
             if (ctr.Height != 0)
-            {
                 yOffset += ctr.Height + 5;
-            }
         }
 
-        y = yOffset + 10;
-        if (!Expanded)
-            y = 32;
-        Height = y;
-
-
-
+        if (!ViewModel.Expanded)
+            Height = 32;
+        else
+            Height = yOffset + 5;
 
         ResumeLayout();
     }
-    private (int, EditorItem) CreateEditorItem(JtNode node, int y, bool resizeOnCreate = false, int insertIndex = -1)
+    private (int, EditorItem) CreateEditorItem(JtNodeViewModel nvm, int y, bool twinTypeChanged = false, int insertIndex = -1)
     {
-        EditorItem bei;
+        EditorItem bei = Create(nvm, RootEditor);
 
-
-
-        if (resizeOnCreate)
-        {
-            if (node.Name is not null)
-                value[node.Name] = null;
-            bei = Create(node, null, RootEditor, eventManagerContext);
-        }
-        else
-        {
-            if (Node.ContainerJsonType is JtContainerType.Block)
-                bei = Create(node, node.Name is null ? null : value[node.Name], RootEditor, eventManagerContext);
-            else
-            {
-                JToken? value = null;
-                int index = node.Parent.Owner?.Children.IndexOf(node) ?? -1;
-                if (index >= 0 && ValidValue!.Count > index)
-                    value = this.value[index];
-
-
-
-                bei = Create(node, value, RootEditor, eventManagerContext);
-            }
-        }
-
-
-        bei.Location = new System.Drawing.Point(10, y);
+        bei.Location = new Point(Indent, y);
         bei.Width = Width - 20;
 
-        if (bei.IsSavable)
-        {
-            if (Node.ContainerJsonType is JtContainerType.Block)
-                value[node.Name!] = bei.Value;
-            else
-            {
-                int index = node.Parent.Owner?.Children.IndexOf(node) ?? -1;
-                if (ValidValue!.Count > index)
-                    value[index] = bei.Value;
-                else
-                {
-                    while (ValidValue.Count < index)
-                    {
-                        ValidValue.Add(JValue.CreateNull());
-                    }
-
-                    ValidValue.Add(bei.Value);
-                }
-            }
-        }
+        ViewModel.UpdateValueForChild(nvm);
 
         Controls.Add(bei);
         if (insertIndex >= 0)
@@ -133,86 +58,10 @@ internal sealed class BlockEditorItem : EditorItem
             Controls.SetChildIndex(bei, insertIndex);
         }
 
+        bei.HeightChanged += bei => UpdateLayout();
 
 
 
-
-        if (resizeOnCreate)
-        {
-            UpdateLayout();
-        }
-
-        bei.HeightChanged += (sender, e) => UpdateLayout();
-        bei.ValueChanged += (sender, e) =>
-        {
-            if (sender is not EditorItem bei)
-                return;
-            if (bei.IsSavable)
-            {
-                if (Node.ContainerJsonType is JtContainerType.Block)
-                    value[node.Name!] = bei.Value;
-                else
-                {
-                    int index = node.Parent.Owner?.Children.IndexOf(node) ?? -1;
-                    if (ValidValue!.Count > index)
-                        value[index] = bei.Value;
-                    else
-                    {
-                        while (ValidValue.Count < index)
-                        {
-                            ValidValue.Add(JValue.CreateNull());
-                        }
-
-                        ValidValue.Add(bei.Value);
-                    }
-                }
-            }
-            else
-            {
-                if (Node.ContainerJsonType is JtContainerType.Array)
-                {
-                    ((JArray)value).Remove(bei.Value);
-                }
-                else
-                    ((JObject)value).Remove(bei.Node.Name!);
-
-            }
-
-            Invalidate();
-            OnValueChanged(e);
-        };
-
-        bei.TwinTypeChanged += (sender, e) =>
-        {
-            if (sender is not EditorItem bei || RootEditor.ReadOnly)
-                return;
-            SuspendLayout();
-            suspendUpdatingLayout = true;
-            int oldHeight = bei.Height;
-            int index = Controls.IndexOf(bei);
-            Controls.Remove(bei);
-            JToken oldValue = bei.Value;
-            (_, EditorItem newei) = CreateEditorItem(e.NewTwinNode, bei.Top, true, index);
-
-            newei.TabIndex = bei.TabIndex;
-            newei.Focus();
-            if (Value is JObject jobject)
-            {
-                if (jobject[bei.Node.Name!] is not null)
-                {
-                    jobject.Remove(bei.Node.Name!);
-                    OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeTwinType, oldValue, newei.Value, this));
-                }
-            }
-
-            suspendUpdatingLayout = false;
-
-            if (oldHeight != newei.Height)
-                UpdateLayout();
-
-
-            ResumeLayout();
-        };
         if (bei.Height != 0)
         {
             y += bei.Height + 5;
@@ -222,183 +71,196 @@ internal sealed class BlockEditorItem : EditorItem
     }
 
 
-    protected override void OnExpandChanged()
+    internal override void OnExpandChanged()
     {
+        int y;
         SuspendLayout();
-        if (!Expanded)
+        if (!ViewModel.Expanded)
         {
             Height = 32;
-            if (Node.IsDynamicName)
-                Controls.Remove(focusControl);
+            DestroyFocusPanel();
             Controls.Clear();
-            focusControl = null;
-            base.OnExpandChanged();
             ResumeLayout();
             return;
         }
 
-        if (IsInvalidValueType)
+        if (ViewModel.IsInvalidValueType)
         {
             ResumeLayout();
             return;
         }
 
-        y = (Node.IsRootChild && Node.Template.Roots.Count == 1) ? 10 : 38;
-        if (!Node.IsRootChild || Node.Template.Roots.Count > 1)
+        if (!Node.IsRootChild || Node.Template.Roots.Count != 1)
         {
-
-            focusControl = new FocusableControl
-            {
-                Height = 0,
-                Width = 0,
-                Top = 0,
-                Left = 0
-            };
-            focusControl.GotFocus += (s, e) =>
-            {
-                if (Node.IsDynamicName)
-                {
-                    if (txtDynamicName is null)
-                        CreateDynamicNameTextBox();
-                    else
-                        txtDynamicName.Focus();
-                }
-                else
-                {
-                    Invalidate();
-
-                }
-            };
-            focusControl.LostFocus += (s, e) => Invalidate();
-            focusControl.KeyDown += (s, e) =>
-            {
-                if (IsInvalidValueType)
-                    return;
-
-                if (e.KeyCode == Keys.Space)
-                {
-                    Expanded = !Expanded;
-                }
-            };
-            Controls.Add(focusControl);
-            focusControl?.Focus();
+            CreateFocusPanel();
+            y = 38;
         }
         else
         {
-            Controls.Remove(focusControl);
-            focusControl = null;
+            y = 10;
         }
 
-        List<string> jsonNodes = new List<string>();
-
-        List<string> twins = new List<string>();
-        int index = 0;
-
-        if (Node.IsDynamicName)
-            index++;
-        foreach (JtNode item in Node.Children.Nodes!)
+        if (childrenMap is null)
         {
-            if (item.Name is null)
-                continue; //TODO: Crete node instead of skipping it
-            if (!jsonNodes.Contains(item.Name))
-                jsonNodes.Add(item.Name);
-
-
-            if (RootEditor.ReadOnly && !RootEditor.ShowEmptyNodesInReadOnlyMode && Node.ContainerJsonType is JtContainerType.Block && value[item.Name] is null or { Type: JTokenType.Null })
+            Span<JtNodeViewModel> childrenVMs = ViewModel.GetChildren();
+            childrenMap = new Dictionary<JtNodeViewModel, EditorItem?>(childrenVMs.Length);
+            int tabIndex = 0;
+            if (Node.IsDynamicName)
+                tabIndex++;
+            for (int i = 0; i < childrenVMs.Length; i++)
             {
-                continue;
-            }
+                JtNodeViewModel item = childrenVMs[i];
+                item.ConditionMetChanged += ChildsConditionChanged;
 
-
-
-            JtNode[]? twinFamily = item.EnumerateTwinFamily().ToArray();
-
-            if (twinFamily.Length > 1)
-            {
-                if (twins.Contains(item.Name))
+                if (!item.IsConditionMet || !item.IsSelectedTwin)
                 {
+                    childrenMap.Add(item, null);
+                    tabIndex++;
                     continue;
                 }
 
-                if (((JObject)value).ContainsKey(item.Name))
-                {
-                    JtNode? t = twinFamily.FirstOrDefault(x => x.JsonType == value[item.Name]?.Type);
-                    if (t is not null)
-                    {
-                        (y, EditorItem ei3) = CreateEditorItem(t, y);
-                        ei3.TabIndex = index;
-                        twins.Add(item.Name);
-                        index++;
-                        continue;
-                    }
-                }
-
-
-                (y, EditorItem ei2) = CreateEditorItem(item, y);
-                ei2.TabIndex = index;
-                twins.Add(item.Name);
-                index++;
-
-                continue;
-
-
+                (y, EditorItem ei) = CreateEditorItem(item, y);
+                ei.TabIndex = tabIndex;
+                childrenMap.Add(item, ei);
+                tabIndex++;
             }
-
-            (y, EditorItem ei) = CreateEditorItem(item, y);
-            ei.TabIndex = index;
-            index++;
-
+        }
+        else
+        {
+            foreach (KeyValuePair<JtNodeViewModel, EditorItem?> item in childrenMap)
+            {
+                if (!item.Key.IsSelectedTwin || !item.Key.IsConditionMet || item.Value is null)
+                    continue;
+                Controls.Add(item.Value);
+                item.Value.Location = new Point(Indent, y);
+                y += item.Value.Height + 5;
+            }
         }
 
-        if (value is JObject obj)
+        Span<JtTwinFamilyViewModel> twinFamilies = CollectionsMarshal.AsSpan(ViewModel.GetContainingTwinFamilies());
+
+        for (int i = 0; i < twinFamilies.Length; i++)
+        {
+            twinFamilies[i].SelectionChanged += ChildsTwinFamilySelectionChanged;
+        }
+
+
+        if (ViewModel.Value is JObject obj)
         {
             foreach (KeyValuePair<string, JToken?> item in obj)
             {
-                if (jsonNodes.Contains(item.Key))
+                if (ViewModel.GetChildren().Any(x => x.Node.Name == item.Key))
                     continue;
 
                 InvalidJsonItem invalidJsonItem = new InvalidJsonItem(item.Value!, RootEditor)
                 {
-                    Location = new System.Drawing.Point(10, y),
-                    Width = Width - 20
+                    Location = new Point(Indent, y),
+                    Width = Width - (2 * Indent)
                 };
                 Controls.Add(invalidJsonItem);
                 y += 32 + 5;
             }
         }
 
-
         Height = y + 5;
         ResumeLayout();
-        base.OnExpandChanged();
+        return;
     }
-    protected override void OnMouseClick(MouseEventArgs e)
-    {
-        base.OnMouseClick(e);
 
-        if (Expanded)
+    private void ChildsTwinFamilySelectionChanged(JtTwinFamilyViewModel family, JtTwinFamilySelectedNodeChangedEventArgs e)
+    {
+        if (ViewModel.Root.IsReadOnly)
+            return;
+        RootEditor.SuspendSrollingToControl = true;
+        SuspendLayout();
+        suspendUpdatingLayout = true; // Suspend not to call UpdateLayout when old editor item is removed
+        JToken? oldValue = null;
+        int oldHeight = 0;
+        int index = Controls.Count - 1;
+        int top = Height - 5;
+
+
+
+        if (e.OldNode is not null && childrenMap!.TryGetValue(e.OldNode, out EditorItem? oldEi) is true && oldEi is not null)
         {
-            focusControl?.Focus();
+            oldHeight = oldEi.Height;
+            top = oldEi.Top;
+            index = Controls.IndexOf(oldEi);
+            if (index == -1)
+                index = Controls.Count - 1;
+            Controls.Remove(oldEi);
+            oldValue = e.OldNode.Value;
         }
-    }
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
 
-        int w = Width - 20;
+        JtNodeViewModel? newNode = e.NewNode;
 
-        foreach (Control item in Controls)
+        suspendUpdatingLayout = false;
+        if (newNode is not null)
         {
-            if (item.Width != w)
-                item.Width = w;
+            newNode.Value = newNode.Node.CreateDefaultValue();
+            if (childrenMap!.TryGetValue(newNode, out EditorItem? newEiFromMap) is true && newEiFromMap is not null)
+            {
+                Controls.Add(newEiFromMap);
+                Controls.SetChildIndex(newEiFromMap, index);
+                newEiFromMap.Focus();
+                newEiFromMap.TabIndex = index;
+                UpdateLayout();
+            }
+            else
+            {
+                (_, EditorItem newei) = CreateEditorItem(newNode, top, true, index);
+
+                childrenMap[newNode] = newei;
+
+                newei.TabIndex = index;
+                newei.Focus();
+                ViewModel.OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeTwinType, oldValue, newNode.Value, ViewModel));
+
+                if (oldHeight != newei.Height)
+                    UpdateLayout();
+            }
+        }
+        else
+        {
+            UpdateLayout();
+        }
+        RootEditor.SuspendSrollingToControl = false;
+        ResumeLayout();
+    }
+
+    private void ChildsConditionChanged(JtNodeViewModel vm)
+    {
+        if (vm.IsConditionMet && vm.IsSelectedTwin)
+        {
+            int index = Array.IndexOf(ViewModel.GetChildren(), vm) + 1; // Focusable Control
+            if (childrenMap?.TryGetValue(vm, out EditorItem? ei) is true && ei is not null)
+            {
+                Controls.Add(ei);
+                Controls.SetChildIndex(ei, index);
+                UpdateLayout();
+                return;
+            }
+
+            (_, EditorItem nei) = CreateEditorItem(vm, 0, false, index);
+
+            childrenMap![vm] = nei;
+
+            UpdateLayout();
+        }
+        else
+        {
+            if (childrenMap?.TryGetValue(vm, out EditorItem? ei) is true && ei is not null)
+            {
+                Controls.Remove(ei);
+            }
         }
     }
     protected override void OnControlRemoved(ControlEventArgs e)
     {
         base.OnControlRemoved(e);
-        if (!Expanded || e.Control is not IJsonItem jsonItem)
+        if (!ViewModel.Expanded || e.Control is not IJsonItem jsonItem)
             return;
-        OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.RemoveToken, jsonItem.Value, null, this));
+        ViewModel.OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.RemoveToken, jsonItem.Value, null, ViewModel));
         UpdateLayout();
     }
 }

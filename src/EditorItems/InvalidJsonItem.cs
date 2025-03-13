@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Aadev.JTF.Editor.EditorItems;
 
-internal partial class InvalidJsonItem : UserControl, IJsonItem
+internal partial class InvalidJsonItem : ContainerControl, IJsonItem
 {
     private int xOffset;
     private int innerHeight;
@@ -17,9 +17,6 @@ internal partial class InvalidJsonItem : UserControl, IJsonItem
 
     public JsonJtfEditor RootEditor { get; }
     public JToken Value { get; }
-
-    public string Path => throw new NotImplementedException();
-
     public InvalidJsonItem(JToken value, JsonJtfEditor rootEditor)
     {
         Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -93,7 +90,7 @@ internal partial class InvalidJsonItem : UserControl, IJsonItem
         }
 
         removeButtonBounds = new Rectangle(Width - xRightOffset - 30, yOffset, 30, innerHeight);
-        if (!RootEditor.ReadOnly)
+        if (!RootEditor.ViewModel.IsReadOnly)
         {
 
             g.FillRectangle(RootEditor.ColorTable.RemoveItemButtonBackBrush, removeButtonBounds);
@@ -114,6 +111,11 @@ internal partial class InvalidJsonItem : UserControl, IJsonItem
 
 
     }
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        Focus();
+    }
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
@@ -130,13 +132,12 @@ internal partial class InvalidJsonItem : UserControl, IJsonItem
             MessageBox.Show(this, Value.ToString(Newtonsoft.Json.Formatting.Indented), "View Value", MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1);
         else if (removeButtonBounds.Contains(e.Location))
         {
-            if (Parent is not BlockEditorItem parent || RootEditor.ReadOnly)
+            if (Parent is not BlockEditorItem parent || RootEditor.ViewModel.IsReadOnly)
                 return;
             if (name is not null)
             {
-                ((JObject?)parent.Value)?.Property(name, StringComparison.Ordinal)?.Remove();
+                ((JObject?)parent.ViewModel.Value)?.Property(name, StringComparison.Ordinal)?.Remove();
                 parent.Controls.Remove(this);
-
             }
         }
     }

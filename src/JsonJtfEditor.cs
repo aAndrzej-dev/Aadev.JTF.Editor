@@ -1,121 +1,112 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using Aadev.JTF.Editor.EditorItems;
+using Aadev.JTF.Editor.ViewModels;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Aadev.JTF.Editor;
 
-public partial class JsonJtfEditor : UserControl
+public partial class JsonJtfEditor : ContainerControl
 {
-    private JTemplate? template;
-    private Func<JtIdentifier, IEnumerable<IJtSuggestion>>? dynamicSuggestionsSource;
-    private JToken? value;
-    private IntelligentSuggestionsProvider? intelligentSuggestionsProvider;
-
-    public event EventHandler? ValueChanged;
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public JtColorTable ColorTable { get; set; } = JtColorTable.Default;
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal bool SuspendSrollingToControl { get; set; }
 
-    public Func<JtIdentifier, IEnumerable<IJtSuggestion>>? DynamicSuggestionsSource { get => dynamicSuggestionsSource; set { dynamicSuggestionsSource = value; OnTemplateChanged(); } }
 
 
-    public JTemplate? Template { get => template; set { template = value; OnTemplateChanged(); } }
-    public JToken? Value { get => value; set { this.value = value; OnTemplateChanged(); } }
-
-    public bool ReadOnly { get; set; }
-    public bool ShowEmptyNodesInReadOnlyMode { get; set; }
-    internal bool DisableScrollingToControl { get; set; }
-    public bool ShowAdvancedToolTip { get; set; }
-
-    public bool NormalizeTwinNodeOrder { get; set; }
-
-    public ISuggestionSelector SuggestionSelector { get; set; }
-    public int MaximumSuggestionCountForComboBox { get; set; } = -1;
     internal ToolTip ToolTip { get; }
-    public IntelligentSuggestionsProvider IntelligentSuggestionsProvider { get => intelligentSuggestionsProvider ??= new IntelligentSuggestionsProvider(); set => intelligentSuggestionsProvider = value; }
 
+    internal ISuggestionSelector SuggestionSelector => ViewModel.SuggestionSelector ??= new SuggestionSelectForm();
+    public JtRootViewModel ViewModel { get; }
 
-    public JsonJtfEditor()
+    public JsonJtfEditor(JtRootViewModel viewModel)
     {
+        ViewModel = viewModel;
         InitializeComponent();
 
         AutoScroll = true;
-        SuggestionSelector = new SuggestionSelectForm();
         ToolTip = new ToolTip()
         {
-            BackColor = System.Drawing.Color.FromArgb(80, 80, 80),
-            ForeColor = System.Drawing.Color.White,
+            BackColor = Color.FromArgb(80, 80, 80),
+            ForeColor = Color.White,
             ShowAlways = true,
             Active = false
 
         };
+        viewModel.TemplateChanged += (s, e) => OnTemplateChanged();
+        OnTemplateChanged();
+
+
     }
 
 
     private void OnTemplateChanged()
     {
-        if (template is null || Value is null)
+        if (ViewModel.Template is null || ViewModel.Value is null)
         {
             return;
         }
 
         Controls.Clear();
-        if (template.Roots.Nodes!.Count == 1)
+
+        if (ViewModel.GetChildren().Length == 0)
+            return;
+
+        if (ViewModel.twinFamily is null || ViewModel.twinFamily.SelectedNode is null)
         {
-            CreateEditorItem(template.Roots.Nodes![0]);
+
+            CreateEditorItem(ViewModel.GetChildren()[0]);
         }
-        else if (template.Roots.Nodes!.Count > 1)
+        else
         {
-            for (int i = 0; i < template.Roots.Count; i++)
-            {
-                JtNode root = template.Roots.Nodes![i];
-                if (root.JsonType == Value.Type)
-                {
-                    CreateEditorItem(root);
-                    return;
-                }
-            }
-
-            CreateEditorItem(template.Roots.Nodes![0]);
+            CreateEditorItem(ViewModel.twinFamily.SelectedNode);
         }
-    }
-    private EditorItem? CreateEditorItem(JtNode root)
-    {
-        if (template is null)
-            return null;
-        EditorItem rootEditorItem = EditorItem.Create(root, value, this, new EventManagerContext(null));
 
-        rootEditorItem.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
-        rootEditorItem.Location = new System.Drawing.Point(10, 10);
-        rootEditorItem.Width = Width - 20;
-        Controls.Add(rootEditorItem);
-        rootEditorItem.ValueChanged += (sender, e) =>
+        if (ViewModel.twinFamily is null || ViewModel.IsReadOnly)
+            return;
+        ViewModel.twinFamily.SelectionChanged += (family, e) =>
         {
-            if (sender is not EditorItem bei)
-                return;
-
-            value = bei.Value;
-            ValueChanged?.Invoke(sender, e);
-        };
-        rootEditorItem.TwinTypeChanged += (sender, e) =>
-        {
-            if (sender is not EditorItem bei || ReadOnly)
-                return;
             SuspendLayout();
-            JToken oldValue = bei.Value;
-            Controls.Remove(bei);
-            value = e.NewTwinNode.CreateDefaultValue();
-            EditorItem newei = CreateEditorItem(e.NewTwinNode)!;
-            newei.TabIndex = 0;
-            ValueChanged?.Invoke(this, EventArgs.Empty);
+            JToken? oldValue = e.OldNode?.Value;
+
+            Controls.Clear();
+
+            JtNodeViewModel? newNode = e.NewNode;
+
+            if (newNode is not null)
+            {
+                newNode.Value = newNode.Node.CreateDefaultValue();
+                EditorItem newei = CreateEditorItem(newNode);
+                newei.TabIndex = 0;
+                newei.Focus();
+                ViewModel.OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeTwinType, oldValue, newNode.Value, null));
+            }
 
             ResumeLayout();
         };
-        value = rootEditorItem.Value;
-        if (rootEditorItem is BlockEditorItem && !rootEditorItem.IsInvalidValueType && template.Roots.Count == 1)
+    }
+    private EditorItem CreateEditorItem(JtNodeViewModel root)
+    {
+        if (ViewModel.Template is null)
+            throw new System.Exception();
+
+
+        EditorItem rootEditorItem = EditorItem.Create(root, this);
+
+        rootEditorItem.Location = new System.Drawing.Point(10, 10);
+        rootEditorItem.Width = Width - 20;
+        Controls.Add(rootEditorItem);
+        root.ValueChanged += (sender, e) =>
+        {
+            Debug.WriteLine(e.Action?.ToString());
+        };
+        ViewModel.ChangeValue(root.Value);
+        if (rootEditorItem is BlockEditorItem && !rootEditorItem.ViewModel.IsInvalidValueType && ViewModel.Template.Roots.Count == 1)
         {
             rootEditorItem.Width = Width;
             rootEditorItem.Top = 0;
@@ -124,18 +115,17 @@ public partial class JsonJtfEditor : UserControl
 
         return rootEditorItem;
     }
-    public void Save(string filename, Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.None)
+    public void Save(string filename, Formatting formatting = Formatting.None)
     {
         using StreamWriter sr = new StreamWriter(filename);
         using JsonWriter jw = new JsonTextWriter(sr);
 
         jw.Formatting = formatting;
 
-        value!.WriteTo(jw);
+        ViewModel.Value!.WriteTo(jw);
 
         jw.Close();
-
     }
 
-    protected override Point ScrollToControl(Control activeControl) => DisableScrollingToControl ? AutoScrollPosition : base.ScrollToControl(activeControl);
+    protected override Point ScrollToControl(Control activeControl) => SuspendSrollingToControl ? AutoScrollPosition : base.ScrollToControl(activeControl);
 }

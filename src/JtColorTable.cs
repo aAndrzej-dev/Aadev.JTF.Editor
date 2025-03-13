@@ -12,6 +12,7 @@ public sealed class JtColorTable
     internal SolidBrush RemoveItemButtonBackBrush { get; } = new SolidBrush(Color.Red);
     internal Pen RemoveItemButtonForePen { get; } = new Pen(Color.White);
     internal SolidBrush TextBoxBackBrush { get; } = new SolidBrush(Color.FromArgb(80, 80, 80));
+    internal SolidBrush NameForeBrush { get; } = new SolidBrush(Color.White);
     internal SolidBrush TextBoxForeBrush { get; } = new SolidBrush(Color.White);
     internal SolidBrush InvalidElementForeBrush { get; } = new SolidBrush(Color.Red);
     internal SolidBrush ActiveBorderBrush { get; } = new SolidBrush(Color.DarkCyan);
@@ -41,6 +42,7 @@ public sealed class JtColorTable
     public Color RemoveItemButtonForeColor { get => RemoveItemButtonForePen.Color; set => RemoveItemButtonForePen.Color = value; }
     public Color TextBoxBackColor { get => TextBoxBackBrush.Color; set => TextBoxBackBrush.Color = value; }
     public Color TextBoxForeColor { get => TextBoxForeBrush.Color; set => TextBoxForeBrush.Color = value; }
+    public Color NameForeColor { get => NameForeBrush.Color; set => NameForeBrush.Color = value; }
     public Color InvalidElementForeColor { get => InvalidElementForeBrush.Color; set => InvalidElementForeBrush.Color = value; }
     public Color ActiveBorderColor { get => ActiveBorderBrush.Color; set => ActiveBorderBrush.Color = value; }
     public Color InactiveBorderColor { get => InactiveBorderBrush.Color; set => InactiveBorderBrush.Color = value; }

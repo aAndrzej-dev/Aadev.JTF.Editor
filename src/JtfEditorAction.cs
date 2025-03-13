@@ -1,17 +1,16 @@
-﻿using System;
-using Aadev.JTF.Editor.EditorItems;
+﻿using Aadev.JTF.Editor.ViewModels;
 using Newtonsoft.Json.Linq;
 
 namespace Aadev.JTF.Editor;
 
-internal class JtfEditorAction
+public class JtfEditorAction
 {
     private JtfEditorAction? reversedAction;
     public JtEditorActionType Type { get; }
     public JToken? OldValue { get; }
     public JToken? NewValue { get; }
-    public EditorItem Invoker { get; }
-    public JtfEditorAction(JtEditorActionType type, JToken? oldValue, JToken? newValue, EditorItem invoker)
+    public JtNodeViewModel Invoker { get; }
+    public JtfEditorAction(JtEditorActionType type, JToken? oldValue, JToken? newValue, JtNodeViewModel invoker)
     {
         Type = type;
         OldValue = oldValue;
@@ -38,7 +37,7 @@ internal class JtfEditorAction
         return reversedAction = new JtfEditorAction(this);
     }
 
-    internal enum JtEditorActionType
+    public enum JtEditorActionType
     {
         None,
         ChangeValue,
@@ -47,14 +46,7 @@ internal class JtfEditorAction
         AddToken,
         RemoveToken,
     }
+    public override string ToString() => $"Event: {Type} Node: {Invoker.Node.Name} OldValue: \"{OldValue}\" NewValue: \"{NewValue}\"";
 }
 
-internal class ValueChangedEventArgs : EventArgs
-{
-    public JtfEditorAction Action { get; }
 
-    public ValueChangedEventArgs(JtfEditorAction action)
-    {
-        Action = action;
-    }
-}

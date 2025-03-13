@@ -14,7 +14,7 @@ internal partial class SuggestionSelectForm : Form, ISuggestionSelector
         InitializeComponent();
         StartPosition = FormStartPosition.CenterParent;
     }
-
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public IJtSuggestion? SelectedSuggestion { get; set; }
 
     private IJtSuggestion? originalSuggestion;

@@ -5,5 +5,4 @@ namespace Aadev.JTF.Editor.EditorItems;
 internal interface IJsonItem
 {
     JToken Value { get; }
-    string Path { get; }
 }

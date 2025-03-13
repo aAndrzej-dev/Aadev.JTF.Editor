@@ -1,25 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	<TargetFrameworks>net7.0-windows;net6.0-windows</TargetFrameworks>
+	<TargetFrameworks>net9.0-windows;net8.0-windows</TargetFrameworks>
 	<UseWindowsForms>true</UseWindowsForms>
 	<RootNamespace>Aadev.JTF.Editor</RootNamespace>
 	<AssemblyName>Aadev.JTF.Editor</AssemblyName>
 	<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 	<Authors>aAndrzej-dev</Authors>
-	<Copyright>Copyright © aAndrzej-dev 2023</Copyright>
+	<Copyright>Copyright © aAndrzej-dev 2025</Copyright>
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
 	<DebugType>none</DebugType>
-	<AssemblyVersion>2.0.0.4</AssemblyVersion>
-	<FileVersion>2.0.0.4</FileVersion>
-	<Version>2.0.0-beta4</Version>
+	<AssemblyVersion>2.0.0.5</AssemblyVersion>
+	<FileVersion>2.0.0.5</FileVersion>
+	<Version>2.0.0-beta5</Version>
     <ImplicitUsings>disable</ImplicitUsings>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Event Managers are now create only when a node has id or condition to save memory
-Added intelligent suggestions by setting suggestions source to "$jtf_auto:{intelligent suggestion name}"
-Library is now signed with strong name
+    <PackageReleaseNotes>The logic is now seperated form the view for future moving to WPF.
 Bug fixes and improvements</PackageReleaseNotes>
 	<Deterministic>true</Deterministic>
 	<RepositoryUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor.git</RepositoryUrl>
@@ -27,14 +25,15 @@ Bug fixes and improvements</PackageReleaseNotes>
 	<RepositoryBranch>main</RepositoryBranch>
 	<RepositoryCommit></RepositoryCommit>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
-	<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-	  <LangVersion>11.0</LangVersion>
-	</PropertyGroup>
-	
-	<ItemGroup>
-		<PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.1" />
-		<PackageReference Include="Aadev.JTF" Version="2.0.0-beta5" />
-	</ItemGroup>
+	<TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+	  <LangVersion>12.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta6" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">

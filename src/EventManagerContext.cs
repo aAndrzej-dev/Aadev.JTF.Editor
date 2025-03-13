@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
 
 namespace Aadev.JTF.Editor;
-internal class EventManagerContext
-{
 
+/// <summary>
+/// Event Manager Context is created for every instance of a prefab in <see cref="EditorItems.ArrayEditorItem"/>.
+/// </summary>
+public class EventManagerContext
+{
     private readonly Dictionary<IdentifiersManager, EventManager> imEmMap = new Dictionary<IdentifiersManager, EventManager>();
 
     public EventManagerContext? Parent { get; }

@@ -1,181 +1,86 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
-using System.Linq;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Aadev.ConditionsInterpreter;
-using Aadev.JTF.Types;
+using Aadev.JTF.Editor.ViewModels;
 using Newtonsoft.Json.Linq;
 
 namespace Aadev.JTF.Editor.EditorItems;
 
-internal abstract partial class EditorItem : UserControl, IJsonItem
+internal abstract class EditorItem : ContainerControl, IJsonItem
 {
-    private readonly JtNode[] twinsFamily;
-    protected string toolTipText;
-    private string? dynamicName;
     private int oldHeight;
-    private bool expanded;
-    private Rectangle expandButtonBounds = Rectangle.Empty;
     private Rectangle removeButtonBounds = Rectangle.Empty;
     private Rectangle discardInvalidTypeButtonBounds = Rectangle.Empty;
     private Rectangle dynamicNameTextboxBounds = Rectangle.Empty;
     private Rectangle nameLabelBounds = Rectangle.Empty;
-    private Rectangle twinFamilyButtonBounds;
-    private bool dontCreateDynamicTextBoxUntilNewFocus = false;
+    private Rectangle twinFamilyButtonBounds = Rectangle.Empty;
 
-    private EventManager? eventManager;
+    protected bool suspendCreatingDynamicTextBoxUntilNewFocus;
     protected TextBox? txtDynamicName;
-    protected int xOffset;
-    protected int xRightOffset;
-    protected int yOffset;
-    protected int innerHeight;
-    protected EventManagerContext eventManagerContext;
 
-    protected EventManager EventManager => eventManager ??= eventManagerContext.GetOrCreate(Node.IdentifiersManager);
-    internal virtual bool IsInvalidValueType => Value.Type != Node.JsonType;
-    protected virtual bool IsFocused => Focused || txtDynamicName?.Focused is true;
+    public JtNodeViewModel ViewModel { get; }
     protected JsonJtfEditor RootEditor { get; }
-    protected SolidBrush ForeColorBrush { get; private set; }
-    protected bool CanCollapse => Node is JtContainerNode c && !c.DisableCollapse;
-    protected bool Expanded { get => expanded; set { if (expanded == value) return; expanded = !CanCollapse || value; RootEditor.DisableScrollingToControl = true; SuspendFocus = true; OnExpandChanged(); SuspendFocus = false; RootEditor.DisableScrollingToControl = false; } }
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal bool SuspendFocus { get; set; } //To prevent creating text boxes
+    protected virtual bool IsFocused => Focused || txtDynamicName?.Focused is true;
     protected virtual Color BorderColor
     {
         get
         {
-            if (IsInvalidValueType)
+            if (ViewModel.IsInvalidValueType)
                 return RootEditor.ColorTable.InvalidBorderColor;
-            else if (Parent is ArrayEditorItem aei && aei.SinglePrefab is not null && aei.SinglePrefab != Node)
+
+            if (Parent is ArrayEditorItem aei && aei.ViewModel.SinglePrefab is not null && aei.ViewModel.SinglePrefab != Node)
                 return RootEditor.ColorTable.WarningBorderColor;
-            else if (IsFocused)
+
+            if (IsFocused)
                 return RootEditor.ColorTable.ActiveBorderColor;
-            else
-                return RootEditor.ColorTable.InactiveBorderColor;
+
+            return RootEditor.ColorTable.InactiveBorderColor;
         }
     }
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    internal int ArrayIndex { get => ViewModel.ArrayIndex; set => ViewModel.ArrayIndex = value; }
+    public JtNode Node => ViewModel.Node;
+    JToken IJsonItem.Value => ViewModel.Value;
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string? DynamicName { get => ViewModel.DynamicName; set => ViewModel.DynamicName = value; }
 
-    internal int ArrayIndex { get; set; } = -1;
-    internal virtual bool IsSavable => Node.Required || Node.Parent?.Owner is { ContainerDisplayType: JtContainerType.Block, ContainerJsonType: JtContainerType.Array } || Node.IsRootChild || Node.IsArrayPrefab;
-    internal bool SuspendFocus { get; private set; }
-
-    public JtNode Node { get; }
-    public abstract JToken Value { get; set; }
-    public string? DynamicName { get => dynamicName; set { dynamicName = value; Invalidate(); } }
-
-    public event EventHandler<ValueChangedEventArgs>? ValueChanged;
-    public event EventHandler<DynamicNamePreviewChangeEventArgs>? DynamicNamePreviewChange;
-    internal event EventHandler<TwinChangedEventArgs>? TwinTypeChanged;
-    internal event EventHandler? HeightChanged;
-
-    private protected EditorItem(JtNode node, JToken? token, JsonJtfEditor rootEditor, EventManagerContext eventManagerContext)
+    internal event EditorItemEventHandler? HeightChanged;
+    private protected EditorItem(JtNodeViewModel viewModel, JsonJtfEditor rootEditor)
     {
-        this.eventManagerContext = eventManagerContext;
-        Node = node;
+        SuspendLayout();
+        ViewModel = viewModel;
         RootEditor = rootEditor;
-        Value = token is null || token.Type is JTokenType.Null ? Node.CreateDefaultValue() : token;
-        twinsFamily = RootEditor.NormalizeTwinNodeOrder ? Node.EnumerateTwinFamily().OrderBy(x => x.Type.Id).ToArray() : Node.EnumerateTwinFamily().ToArray();
 
-        InitializeComponent();
-        ForeColorBrush = new SolidBrush(ForeColor);
+        ViewModel.ValueChanged += (s, e) => Invalidate();
+
         oldHeight = Height;
-        SetStyle(ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.Selectable, true);
-
+        SetStyle(ControlStyles.ResizeRedraw | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.Selectable | ControlStyles.SupportsTransparentBackColor, true);
         Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right;
-
+        Margin = new Padding(0);
+        Name = "EditorItem";
+        Size = new Size(500, 1);
         AutoScaleMode = AutoScaleMode.None;
+        Height = 32;
+        TabStop = true;
 
-        twinFamilyButtonBounds = new Rectangle(1, 1, twinsFamily.Length * 30, 30);
-
-        if (!Node.Id.IsEmpty)
-        {
-            eventManager = eventManagerContext.GetOrCreate(node.IdentifiersManager);
-            ValueChanged += (s, ev) => eventManager.GetEvent(Node.Id)?.Invoke(Value);
-            eventManager.GetEvent(Node.Id)?.Invoke(Value);
-
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.AppendLine(CultureInfo.InvariantCulture, $"{Node.Name}");
-        if (!Node.Id.IsEmpty)
-            sb.AppendLine(CultureInfo.InvariantCulture, $"Id: {Node.Id}");
-        if (Node.Description is not null)
-            sb.AppendLine(Node.Description);
-        toolTipText = sb.ToString();
-
-
-        if (Node.Condition is not null)
-        {
-            eventManager = eventManagerContext.GetOrCreate(node.IdentifiersManager);
-            Dictionary<string, ChangedEvent> vars = new Dictionary<string, ChangedEvent>();
-
-
-            ConditionInterpreter? interpreter = new ConditionInterpreter(x =>
-            {
-                string? id = x.ToLowerInvariant();
-                if (vars.TryGetValue(id, out ChangedEvent? ce))
-                    return ce.Value ?? JValue.CreateNull();
-                ChangedEvent? e = eventManager.GetEvent(id);
-                if (e is null)
-                    return JValue.CreateNull();
-                vars.Add(id, e);
-                return e?.Value ?? JValue.CreateNull();
-            }, Node.Condition);
-
-
-
-            SetDisplayState(interpreter.ResolveCondition());
-            foreach (KeyValuePair<string, ChangedEvent> ce in vars)
-            {
-                ce.Value.Event += (sender, e) =>
-                {
-                    if (IsDisposed)
-                        return;
-                    SetDisplayState(interpreter.ResolveCondition());
-
-                };
-            }
-        }
-        else
-        {
-            SetDisplayState(true);
-        }
+        ResumeLayout(false);
     }
 
-    protected JToken CreateValue() => Value = Node.CreateDefaultValue();
-    protected void OnValueChanged(JtfEditorAction action) => ValueChanged?.Invoke(this, new ValueChangedEventArgs(action));
-    protected void OnValueChanged(ValueChangedEventArgs eventArgs) => ValueChanged?.Invoke(this, eventArgs);
-    protected virtual void OnExpandChanged()
-    {
-        Focus();
-        Invalidate();
-    }
-    private void SetDisplayState(bool state)
-    {
-        if (state)
-        {
-            Expanded = false;
-            Height = 32;
-            TabStop = true;
-        }
-        else
-        {
-            Expanded = false;
-            Height = 0;
-            TabStop = false;
-            Value = Node.CreateDefaultValue();
-        }
-    }
     protected void CreateDynamicNameTextBox()
     {
-
         if (txtDynamicName is not null)
             return;
 
         if (SuspendFocus)
+        {
             return;
+        }
 
         txtDynamicName = new TextBox
         {
@@ -188,28 +93,30 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
 
             Text = DynamicName,
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-            ReadOnly = RootEditor.ReadOnly
+            ReadOnly = ViewModel.Root.IsReadOnly
         };
 
         txtDynamicName.Location = new Point(dynamicNameTextboxBounds.X + 10, 16 - (txtDynamicName.Height / 2));
         txtDynamicName.Width = dynamicNameTextboxBounds.Width - 20;
-        txtDynamicName.TextChanged += (sender, eventArgs) =>
-        {
-            DynamicNamePreviewChange?.Invoke(this, new DynamicNamePreviewChangeEventArgs(txtDynamicName?.Name, DynamicName));
-        };
+        txtDynamicName.TextChanged += (sender, eventArgs) => ViewModel.OnDynamicNamePreviewChange();
         txtDynamicName.LostFocus += (sender, eventArgs) =>
         {
             if (txtDynamicName is null)
+            {
                 return;
+            }
 
-            if (DynamicName != txtDynamicName.Text && !RootEditor.ReadOnly)
+            if (DynamicName != txtDynamicName.Text && !ViewModel.Root.IsReadOnly)
             {
                 string? oldDynamicName = DynamicName;
                 DynamicName = txtDynamicName.Text;
-                OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.DynamicNameChanged, oldDynamicName, DynamicName, this));
+                ViewModel.OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.DynamicNameChanged, oldDynamicName, DynamicName, ViewModel));
             }
             else
+            {
                 Invalidate();
+            }
+
             Controls.Remove(txtDynamicName);
             txtDynamicName = null;
         };
@@ -220,7 +127,7 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
             if (e.KeyCode == Keys.Enter)
             {
                 e.SuppressKeyPress = true;
-                dontCreateDynamicTextBoxUntilNewFocus = true;
+                suspendCreatingDynamicTextBoxUntilNewFocus = true;
                 Controls.Remove(txtDynamicName);
                 e.Handled = true;
             }
@@ -230,106 +137,109 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
         txtDynamicName?.SelectAll();
     }
 
-
-    private void InitDraw(Graphics g)
+    protected virtual void InitDraw(Graphics g, ref DrawingBounds db)
     {
         Color borderColor = BorderColor;
 
         if (IsFocused)
         {
             ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), borderColor, 2, ButtonBorderStyle.Solid, borderColor, 2, ButtonBorderStyle.Solid, borderColor, 2, ButtonBorderStyle.Solid, borderColor, 2, ButtonBorderStyle.Solid);
-            xOffset = 2;
-            xRightOffset = 2;
-            yOffset = 2;
-            if (Expanded && Node is JtContainerNode)
-                innerHeight = 29;
+            db.xOffset = 2;
+            db.xRightOffset = 2;
+            db.yOffset = 2;
+            if (ViewModel is JtContainerViewModel cvm && cvm.Expanded)
+                db.innerHeight = 29;
             else
-                innerHeight = 28;
+                db.innerHeight = 28;
         }
-
         else
         {
             ControlPaint.DrawBorder(g, new Rectangle(0, 0, Width, Height), borderColor, ButtonBorderStyle.Solid);
-            xOffset = 1;
-            xRightOffset = 1;
-            yOffset = 1;
-            innerHeight = 30;
+            db.xOffset = 1;
+            db.xRightOffset = 1;
+            db.yOffset = 1;
+            db.innerHeight = 30;
         }
     }
-    private void DrawInvalidValueMessage(Graphics g)
+    private void DrawInvalidValueMessage(Graphics g, ref DrawingBounds db)
     {
-        if (!IsInvalidValueType)
+        if (!ViewModel.IsInvalidValueType)
+        {
             return;
+        }
 
-
-        string message = string.Format(CultureInfo.CurrentCulture, Properties.Resources.InvalidValueType, Value.Type, Node.JsonType);
+        string message = string.Format(CultureInfo.CurrentCulture, Properties.Resources.InvalidValueType, ViewModel.Value.Type, Node.JsonType);
 
         SizeF sf = g.MeasureString(message, Font);
-        g.DrawString(message, Font, RootEditor.ColorTable.InvalidValueBrush, new PointF(xOffset + 10, 16 - (sf.Height / 2)));
+        g.DrawString(message, Font, RootEditor.ColorTable.InvalidValueBrush, new PointF(db.xOffset + 10, 16 - (sf.Height / 2)));
 
-        xOffset += (int)sf.Width + 20;
+        db.xOffset += (int)sf.Width + 20;
 
         string discardMessage = Properties.Resources.DiscardInvalidType;
 
         SizeF dsf = g.MeasureString(discardMessage, Font);
 
-        discardInvalidTypeButtonBounds = new Rectangle(xOffset, yOffset, (int)dsf.Width + 10, innerHeight);
+        discardInvalidTypeButtonBounds = new Rectangle(db.xOffset, db.yOffset, (int)dsf.Width + 10, db.innerHeight);
         g.FillRectangle(RootEditor.ColorTable.DiscardInvalidValueButtonBackBrush, discardInvalidTypeButtonBounds);
-        g.DrawString(discardMessage, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, xOffset + 5, 16 - (dsf.Height / 2));
+        g.DrawString(discardMessage, Font, RootEditor.ColorTable.DiscardInvalidValueButtonForeBrush, db.xOffset + 5, 16 - (dsf.Height / 2));
 
-        xOffset += (int)sf.Width + 20;
+        db.xOffset += (int)sf.Width + 20;
     }
-    private void DrawDynamicName(Graphics g)
+    private void DrawDynamicName(Graphics g, ref DrawingBounds db)
     {
         if (!Node.IsDynamicName)
-            return;
-
-
-        if (Node is JtContainerNode)
         {
-            dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, Width - xOffset - xRightOffset, innerHeight);
+            return;
+        }
+
+        if (ViewModel is JtContainerViewModel)
+        {
+            dynamicNameTextboxBounds = new Rectangle(db.xOffset, db.yOffset, Width - db.xOffset - db.xRightOffset, db.innerHeight);
             g.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, dynamicNameTextboxBounds);
 
             if (txtDynamicName is not null)
+            {
                 return;
-
+            }
 
             SizeF sf = g.MeasureString(DynamicName, Font);
 
-            g.DrawString(DynamicName, Font, RootEditor.ColorTable.TextBoxForeBrush, new PointF(xOffset + 10, 16 - (sf.Height / 2)));
+            g.DrawString(DynamicName, Font, RootEditor.ColorTable.TextBoxForeBrush, new PointF(db.xOffset + 10, 16 - (sf.Height / 2)));
         }
         else
         {
             SizeF s = g.MeasureString(":", Font);
-            int size = (Width - xOffset - (int)s.Width - 10 - xRightOffset) / 2;
+            int size = (Width - db.xOffset - (int)s.Width - 10 - db.xRightOffset) / 2;
 
-            dynamicNameTextboxBounds = new Rectangle(xOffset, yOffset, size, innerHeight);
+            dynamicNameTextboxBounds = new Rectangle(db.xOffset, db.yOffset, size, db.innerHeight);
             g.FillRectangle(RootEditor.ColorTable.TextBoxBackBrush, dynamicNameTextboxBounds);
             if (txtDynamicName is null)
             {
 
                 SizeF sf = g.MeasureString(DynamicName, Font);
 
-                g.DrawString(DynamicName, Font, RootEditor.ColorTable.TextBoxForeBrush, new PointF(xOffset + 10, 16 - (sf.Height / 2)));
+                g.DrawString(DynamicName, Font, RootEditor.ColorTable.TextBoxForeBrush, new PointF(db.xOffset + 10, 16 - (sf.Height / 2)));
             }
 
-            xOffset += size;
+            db.xOffset += size;
 
 
-            g.DrawString(":", Font, ForeColorBrush, new PointF(xOffset + 5, 16 - (s.Height / 2)));
+            g.DrawString(":", Font, RootEditor.ColorTable.NameForeBrush, new PointF(db.xOffset + 5, 16 - (s.Height / 2)));
 
-            xOffset += (int)s.Width + 10;
+            db.xOffset += (int)s.Width + 10;
 
         }
     }
-    private void DrawRemoveButton(Graphics g)
+    private void DrawRemoveButton(Graphics g, ref DrawingBounds db)
     {
-        if (!Node.IsArrayPrefab || RootEditor.ReadOnly)
+        if (!Node.IsArrayPrefab || RootEditor.ViewModel.IsReadOnly)
+        {
             return;
+        }
 
         int width = IsFocused ? 29 : 30;
-        removeButtonBounds = new Rectangle(Width - xRightOffset - width, yOffset, width, innerHeight);
-        if (Expanded && !Node.IsDynamicName && Node is not JtArrayNode)
+        removeButtonBounds = new Rectangle(Width - db.xRightOffset - width, db.yOffset, width, db.innerHeight);
+        if (ViewModel is JtBlockViewModel bvm && bvm.Expanded && !Node.IsDynamicName)
         {
             RectangleF bounds = new RectangleF(removeButtonBounds.Location, removeButtonBounds.Size);
             g.SmoothingMode = SmoothingMode.HighQuality;
@@ -346,166 +256,57 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
             g.SmoothingMode = SmoothingMode.Default;
         }
         else
+        {
             g.FillRectangle(RootEditor.ColorTable.RemoveItemButtonBackBrush, removeButtonBounds);
+        }
 
         g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - 20, 12, Width - 12, 20);
         g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - 12, 12, Width - 20, 20);
 
-        xRightOffset += width;
+        db.xRightOffset += width;
     }
-    private void DrawName(Graphics g)
+    private void DrawName(Graphics g, ref DrawingBounds db)
     {
-        if (!string.IsNullOrEmpty(Node.DisplayName))
-        {
-            int x = xOffset;
-            xOffset += ArrayIndex != -1 ? 10 : 20;
-
-            string dn;
-            if (ArrayIndex != -1)
-                dn = ConvertToFriendlyName($"{ArrayIndex} ({Node.DisplayName})");
-            else
-                dn = ConvertToFriendlyName(Node.DisplayName);
-            SizeF nameSize = g.MeasureString(dn, Font);
-
-            g.DrawString(dn, Font, IsSavable ? ForeColorBrush : RootEditor.ColorTable.DefaultElementForeBrush, new PointF(xOffset, 16 - (nameSize.Height / 2)));
-            xOffset += (int)nameSize.Width;
-
-
-
-            if (Node.Required)
-            {
-                g.DrawString("*", Font, RootEditor.ColorTable.RequiredStarBrush, new PointF(xOffset, 16 - (nameSize.Height / 2)));
-            }
-
-
-
-
-
-            xOffset += ArrayIndex != -1 ? 10 : 20;
-            nameLabelBounds = new Rectangle(x, 1, xOffset - x, 30);
-        }
-        else if (ArrayIndex != -1)
-        {
-            int x = xOffset;
-            xOffset += 10;
-
-            string index = ArrayIndex.ToString(CultureInfo.CurrentCulture);
-            SizeF nameSize = g.MeasureString(index, Font);
-
-            g.DrawString(index, Font, ForeColorBrush, new PointF(xOffset, (32 / 2) - (nameSize.Height / 2)));
-
-            xOffset += (int)nameSize.Width;
-            xOffset += 10;
-
-            nameLabelBounds = new Rectangle(x, 1, xOffset - x, 30);
-        }
-    }
-
-    private bool CanDrawExpandButton => Node is JtContainerNode && !IsInvalidValueType && CanCollapse && !(RootEditor.ReadOnly && !IsSavable) && !Node.IsRootChild;
-
-    public string Path => Parent is IJsonItem ji ? ji.Path + GetCurrentPathName() : GetCurrentPathName();
-    private string GetCurrentPathName()
-    {
-        if (Node.IsDynamicName)
-        {
-            return $"[{DynamicName}]";
-        }
-        else if (Node.IsArrayPrefab)
-        {
-            return $"[{ArrayIndex}]";
-        }
-        else
-        {
-            return $"\\{Node.Name!}";
-        }
-    }
-
-    private void DrawExpandButton(Graphics g)
-    {
-        if (!CanDrawExpandButton)
+        if (string.IsNullOrEmpty(Node.DisplayName) && ArrayIndex == -1)
             return;
 
-        expandButtonBounds = new Rectangle(xOffset, yOffset, 30, innerHeight);
+        int x = db.xOffset;
+        db.xOffset += ArrayIndex != -1 ? 10 : 20;
 
-        if (Expanded && !Node.IsDynamicName)
+        SizeF nameSize = g.MeasureString(ViewModel.FriendlyDisplayName, Font);
+
+        g.DrawString(ViewModel.FriendlyDisplayName, Font, ViewModel.IsSavable ? RootEditor.ColorTable.NameForeBrush : RootEditor.ColorTable.DefaultElementForeBrush, new PointF(db.xOffset, 16 - (nameSize.Height / 2)));
+
+        db.xOffset += (int)nameSize.Width;
+
+        if (Node.Required)
         {
-            RectangleF bounds = new RectangleF(expandButtonBounds.Location, expandButtonBounds.Size);
-            g.SmoothingMode = SmoothingMode.HighQuality;
-            using GraphicsPath rectPath = new GraphicsPath();
-
-            bounds.Offset(-0.5f, -0.5f);
-            float w = bounds.X + bounds.Width;
-            float h = bounds.Y + bounds.Height;
-            rectPath.AddLine(bounds.X, bounds.Y, w, bounds.Y);
-            rectPath.AddArc(w - 10, h - 10, 10, 10, 0, 90);
-            if (twinsFamily[^1] == Node)
-                rectPath.AddLine(bounds.X, h, bounds.X, bounds.Y);
-            else
-                rectPath.AddArc(bounds.X, h - 10, 10, 10, 90, 90);
-
-            g.FillPath(RootEditor.ColorTable.ExpandButtonBackBrush, rectPath);
-
-            g.SmoothingMode = SmoothingMode.Default;
-
-        }
-        else
-            g.FillRectangle(RootEditor.ColorTable.ExpandButtonBackBrush, expandButtonBounds);
-
-
-        g.SmoothingMode = SmoothingMode.HighQuality;
-        RectangleF innerRectBounds = new RectangleF(xOffset + 7, 8, 16, 16);
-        using GraphicsPath innerRectPath = new GraphicsPath();
-
-        float iw = innerRectBounds.X + innerRectBounds.Width;
-        float ih = innerRectBounds.Y + innerRectBounds.Height;
-
-        innerRectPath.AddArc(innerRectBounds.X, innerRectBounds.Y, 4, 4, 180, 90);
-        innerRectPath.AddArc(iw - 4, innerRectBounds.Y, 4, 4, 270, 90);
-        innerRectPath.AddArc(iw - 4, ih - 4, 4, 4, 0, 90);
-
-        innerRectPath.AddArc(innerRectBounds.X, ih - 4, 4, 4, 90, 90);
-        innerRectPath.CloseFigure();
-        g.DrawPath(RootEditor.ColorTable.ExpandButtonForePen, innerRectPath);
-        g.SmoothingMode = SmoothingMode.Default;
-
-
-        if (Expanded)
-        {
-            g.DrawLine(RootEditor.ColorTable.ExpandButtonForePen, xOffset + 12, 16, xOffset + 18, 16);
-        }
-        else
-        {
-            g.DrawLine(RootEditor.ColorTable.ExpandButtonForePen, xOffset + 12, 16, xOffset + 18, 16);
-            g.DrawLine(RootEditor.ColorTable.ExpandButtonForePen, xOffset + 15, 12, xOffset + 15, 20);
+            g.DrawString("*", Font, RootEditor.ColorTable.RequiredStarBrush, new PointF(db.xOffset, 16 - (nameSize.Height / 2)));
         }
 
-        xOffset += 30;
+        db.xOffset += ArrayIndex != -1 ? 10 : 20;
+        nameLabelBounds = new Rectangle(x, 1, db.xOffset - x, 30);
     }
-    private void DrawTypeIcons(Graphics g)
+    protected virtual void DrawExpandButton(Graphics g, bool isLastInTwinFamily, ref DrawingBounds db) { }
+    protected virtual void PostDraw(Graphics g, ref DrawingBounds db) { }
+    private bool DrawTypeIcons(Graphics g, ref DrawingBounds db)
     {
-        bool rounded = Node is JtContainerNode && Expanded && (!CanCollapse || twinsFamily[^1] != Node || twinsFamily[0] != Node);
+        int startX = db.xOffset;
+        bool drawRounded = ViewModel is JtContainerViewModel { Expanded: true };
 
-
-        Span<JtNode> twinFamilySpan = twinsFamily;
-        bool isLastNode = twinFamilySpan[^1] == Node;
-        bool isFirstNode = twinFamilySpan[0] == Node;
-        for (int i = 0; i < twinFamilySpan.Length; i++)
+        void DrawSingleType(JtNodeViewModel item, int i, bool isLastNode, bool isFirstNode, ref DrawingBounds db)
         {
-            JtNode item = twinFamilySpan[i];
-            if (Node.IsArrayPrefab && Node != item)
+            if (Properties.Resources.ResourceManager.GetObject(item.Node.Type.Name, CultureInfo.InvariantCulture) is not Bitmap bmp)
             {
-                continue;
+                return;
             }
 
-            if (Properties.Resources.ResourceManager.GetObject(item.Type.Name, CultureInfo.InvariantCulture) is not Bitmap bmp)
-                continue;
-
             int width = i == 0 && IsFocused ? 29 : 30;
-            if (Node == item)
+            if (ViewModel == item)
             {
-                if (rounded)
+                if (drawRounded)
                 {
-                    RectangleF bounds = new RectangleF(xOffset, yOffset, width, innerHeight);
+                    RectangleF bounds = new RectangleF(db.xOffset, db.yOffset, width, db.innerHeight);
                     g.SmoothingMode = SmoothingMode.HighQuality;
                     using GraphicsPath rectPath = new GraphicsPath();
 
@@ -515,46 +316,115 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
                     rectPath.AddLine(bounds.X, bounds.Y, w, bounds.Y);
 
 
-                    if (!isLastNode || !CanDrawExpandButton)
+                    if (!isLastNode)
+                    {
                         rectPath.AddArc(w - 10, h - 10, 10, 10, 0, 90);
+                    }
                     else
+                    {
                         rectPath.AddLine(w, bounds.Y, w, h);
+                    }
+
                     if (isFirstNode)
+                    {
                         rectPath.AddLine(bounds.X, h, bounds.X, bounds.Y);
+                    }
                     else
+                    {
                         rectPath.AddArc(bounds.X, h - 10, 10, 10, 90, 90);
+                    }
+
                     g.FillPath(RootEditor.ColorTable.SelectedNodeTypeBackBrush, rectPath);
 
                     g.SmoothingMode = SmoothingMode.Default;
                 }
                 else
-                    g.FillRectangle(RootEditor.ColorTable.SelectedNodeTypeBackBrush, xOffset, yOffset, width, innerHeight);
-
+                {
+                    g.FillRectangle(RootEditor.ColorTable.SelectedNodeTypeBackBrush, db.xOffset, db.yOffset, width, db.innerHeight);
+                }
             }
 
-            g.DrawImage(bmp, xOffset + (i == 0 && IsFocused ? 7 : 8), 8, 16, 16);
+            g.DrawImage(bmp, db.xOffset + (i == 0 && IsFocused ? 7 : 8), 8, 16, 16);
 
-            xOffset += width;
+            db.xOffset += width;
         }
+
+
+        ReadOnlySpan<JtNodeViewModel> twinFamilySpan = CollectionsMarshal.AsSpan(ViewModel.TwinFamily?.members);
+        if (twinFamilySpan.Length == 0)
+        {
+            DrawSingleType(ViewModel, 0, true, true, ref db);
+            twinFamilyButtonBounds = new Rectangle(startX, db.yOffset, db.xOffset - startX, db.innerHeight);
+            return true;
+        }
+
+
+
+        bool isLastNode = false;
+
+        for (int i = twinFamilySpan.Length - 1; i >= 0; i--)
+        {
+            if (twinFamilySpan[i] == ViewModel)
+            {
+                isLastNode = true;
+                break;
+            }
+
+            if (twinFamilySpan[i].IsConditionMet)
+                break;
+        }
+
+        bool isFirstNode = false;
+        bool isFirstNodeSet = false;
+        for (int i = 0; i < twinFamilySpan.Length; i++)
+        {
+            if (!isFirstNodeSet && twinFamilySpan[i] == ViewModel)
+            {
+                isFirstNode = true;
+                isFirstNodeSet = true;
+            }
+
+            if (twinFamilySpan[i].IsConditionMet)
+            {
+                isFirstNodeSet = true;
+            }
+            else
+                continue;
+
+            JtNodeViewModel item = twinFamilySpan[i];
+            if (Node.IsArrayPrefab && ViewModel != item)
+            {
+                continue;
+            }
+
+            DrawSingleType(item, i, isLastNode, isFirstNode, ref db);
+        }
+
+        twinFamilyButtonBounds = new Rectangle(startX, db.yOffset, db.xOffset - startX, db.innerHeight);
+
+        return isLastNode;
     }
 
     protected override void OnGotFocus(EventArgs e)
     {
         base.OnGotFocus(e);
+
         if (Node.IsDynamicName)
         {
             if (txtDynamicName is null)
             {
-                if (dontCreateDynamicTextBoxUntilNewFocus)
+                if (suspendCreatingDynamicTextBoxUntilNewFocus)
                 {
-                    dontCreateDynamicTextBoxUntilNewFocus = false;
+                    suspendCreatingDynamicTextBoxUntilNewFocus = false;
                     return;
                 }
 
                 CreateDynamicNameTextBox();
             }
             else
+            {
                 txtDynamicName.Focus();
+            }
         }
 
         Invalidate();
@@ -564,49 +434,33 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
         base.OnLostFocus(e);
         Invalidate();
     }
-    protected override void OnForeColorChanged(EventArgs e)
-    {
-        if (ForeColorBrush.Color != ForeColor)
-            ForeColorBrush = new SolidBrush(ForeColor);
-        base.OnForeColorChanged(e);
-    }
     protected override void OnPaint(PaintEventArgs e)
     {
         Graphics g = e.Graphics;
 
-        if (Node.IsRootChild)
-        {
-            Expanded = true;
-            if (Node is JtContainerNode { ContainerDisplayType: JtContainerType.Block } && !IsInvalidValueType && Node.Template.Roots.Count == 1)
-            {
-                xOffset = 0;
-                xRightOffset = 0;
-                yOffset = 0;
-                innerHeight = 32;
-                return;
-            }
-        }
-
-        if (Node is JtContainerNode c && c.DisableCollapse)
-            Expanded = true;
-
-
-        InitDraw(g);
         if (ArrayIndex != -1)
         {
             TabIndex = ArrayIndex;
         }
-
-
-        DrawTypeIcons(g);
-        DrawExpandButton(g);
-        DrawName(g);
-        DrawInvalidValueMessage(g);
-        DrawRemoveButton(g);
-        DrawDynamicName(g);
+        DrawingBounds drawingBounds = new DrawingBounds();
+        OnDraw(g, ref drawingBounds);
     }
-
-
+    protected virtual void OnDraw(Graphics g, ref DrawingBounds db)
+    {
+        InitDraw(g, ref db);
+        bool isLast = DrawTypeIcons(g, ref db);
+        DrawExpandButton(g, isLast, ref db);
+        DrawName(g, ref db);
+        DrawInvalidValueMessage(g, ref db);
+        DrawRemoveButton(g, ref db);
+        DrawDynamicName(g, ref db);
+        PostDraw(g, ref db);
+    }
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        Focus();
+    }
     protected override void OnMouseClick(MouseEventArgs e)
     {
         base.OnMouseClick(e);
@@ -617,35 +471,31 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
             return;
         }
 
-        if (expandButtonBounds.Contains(e.Location))
-        {
-            Expanded = !Expanded;
-            if (Control.ModifierKeys is Keys.Shift && Expanded)
-            {
-                DeepExpand();
-            }
 
-            return;
-        }
 
         if (removeButtonBounds.Contains(e.Location))
         {
             if (txtDynamicName is not null)
             {
-                if (DynamicName != txtDynamicName.Text && !RootEditor.ReadOnly)
+                if (DynamicName != txtDynamicName.Text && !ViewModel.Root.IsReadOnly)
                 {
                     string? oldDynamicName = DynamicName;
                     DynamicName = txtDynamicName.Text;
-                    OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.DynamicNameChanged, oldDynamicName, DynamicName, this));
+                    ViewModel.OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.DynamicNameChanged, oldDynamicName, DynamicName, ViewModel));
                 }
                 else
+                {
                     Invalidate();
+                }
+
                 Controls.Remove(txtDynamicName);
                 txtDynamicName = null;
             }
 
             if (Parent is not ArrayEditorItem parent)
+            {
                 throw new Exception();
+            }
 
             parent.RemoveChild(this);
 
@@ -655,13 +505,16 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
 
         if (discardInvalidTypeButtonBounds.Contains(e.Location))
         {
-            CreateValue();
-            if (Node.IsRootChild)
-                Expanded = true;
-            if (!CanCollapse || Node.IsRootChild)
-                OnExpandChanged();
-            else
-                Invalidate();
+            ViewModel.CreateValue();
+
+            if (ViewModel is JtContainerViewModel cvm && cvm.AlwaysExpanded)
+            {
+                if (this is ContainerEditorItem cei)
+                {
+                    cei.OnExpandChanged();
+                    return;
+                }
+            }
 
             return;
         }
@@ -672,170 +525,71 @@ internal abstract partial class EditorItem : UserControl, IJsonItem
             return;
         }
 
-
-
-        if (new Rectangle(0, 1, twinsFamily.Length * 30, 30).Contains(e.Location))
+        if (ViewModel.TwinFamily is not null && twinFamilyButtonBounds.Contains(e.Location))
         {
-            JtNode newType = twinsFamily[(e.Location.X - 1) / 30];
-
-            if (newType == Node)
-                return;
-            TwinTypeChanged?.Invoke(this, new TwinChangedEventArgs(newType));
-
+            JtNodeViewModel newType = ViewModel.TwinFamily[e.Location.X / 30];
+            ViewModel.TwinFamily?.RequestChange(newType);
             return;
-
         }
-    }
-
-    private void DeepExpand()
-    {
-        if (Node is not JtContainerNode)
-            return;
-        SuspendFocus = true;
-        foreach (object? item in Controls)
-        {
-            if (item is BlockEditorItem bei)
-            {
-                if (bei.ValidValue?.Count > 0)
-                {
-                    bei.Expanded = true;
-                    bei.DeepExpand();
-                }
-            }
-
-            if (item is ArrayEditorItem aei)
-            {
-                if (aei.ValidValue?.Count > 0)
-                {
-                    aei.Expanded = true;
-                    aei.DeepExpand();
-                }
-            }
-        }
-
-        SuspendFocus = false;
     }
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
 
         if (oldHeight == Height)
+        {
             return;
-        oldHeight = Height;
-        HeightChanged?.Invoke(this, EventArgs.Empty);
-    }
+        }
 
+        oldHeight = Height;
+        HeightChanged?.Invoke(this);
+    }
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-
-
 
         if (nameLabelBounds.Contains(e.Location))
         {
             Cursor = Cursors.Help;
             if (RootEditor.ToolTip.Active)
+            {
                 return;
+            }
+
             RootEditor.ToolTip.Active = true;
-            RootEditor.ToolTip.Show(toolTipText, this);
+            RootEditor.ToolTip.Show(ViewModel.ToolTipText, this);
             return;
         }
-        else
+        else if (RootEditor.ToolTip.Active)
         {
-            if (RootEditor.ToolTip.Active)
-            {
-
-                RootEditor.ToolTip.Active = false;
-                RootEditor.ToolTip.Hide(this);
-            }
+            RootEditor.ToolTip.Active = false;
+            RootEditor.ToolTip.Hide(this);
         }
 
-        if (expandButtonBounds.Contains(e.Location))
+        if (!ViewModel.Root.IsReadOnly && (removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location)))
+        {
             Cursor = Cursors.Hand;
-        else if (!RootEditor.ReadOnly && (removeButtonBounds.Contains(e.Location) || discardInvalidTypeButtonBounds.Contains(e.Location) || twinFamilyButtonBounds.Contains(e.Location)))
-            Cursor = Cursors.Hand;
-        else if (dynamicNameTextboxBounds.Contains(e.Location) && !RootEditor.ReadOnly)
+        }
+        else if (dynamicNameTextboxBounds.Contains(e.Location) && !ViewModel.Root.IsReadOnly)
+        {
             Cursor = Cursors.IBeam;
-
+        }
         else
+        {
             Cursor = Cursors.Default;
-
-    }
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-
-        if (IsInvalidValueType)
-            return;
-
-        if (Node is JtContainerNode && e.KeyCode == Keys.Space)
-        {
-            Expanded = !Expanded;
-        }
-    }
-    protected override void OnParentChanged(EventArgs e)
-    {
-        base.OnParentChanged(e);
-
-        if (Parent is null)
-        {
-            Dispose();
         }
     }
 
-    protected static string ConvertToFriendlyName(string name)
+
+    public static EditorItem Create(JtNodeViewModel viewModel, JsonJtfEditor rootEditor)
     {
-        return string.Create(name.Length, name, new System.Buffers.SpanAction<char, string>((span, n) =>
+        return viewModel switch
         {
-            span[0] = char.ToUpper(n[0], CultureInfo.CurrentCulture);
-            for (int i = 1; i < name.Length; i++)
-            {
-                if (name[i] is '_')
-                {
-                    span[i] = ' ';
-                    if (name.Length <= i + 1)
-                    {
-                        continue;
-                    }
-
-                    i++;
-                    span[i] = char.ToUpper(name[i], CultureInfo.CurrentCulture);
-                    continue;
-                }
-
-                span[i] = name[i];
-            }
-        }));
+            JtBoolViewModel boolNode => new BoolEditorItem(boolNode, rootEditor),
+            JtValueViewModel valueNode => new ValueEditorItem(valueNode, rootEditor),
+            JtBlockViewModel blockNode => new BlockEditorItem(blockNode, rootEditor),
+            JtArrayViewModel arrayNode => new ArrayEditorItem(arrayNode, rootEditor),
+            _ => new UnknownEditorItem(viewModel, rootEditor)
+        };
     }
-    public static EditorItem Create(JtNode node, JToken? token, JsonJtfEditor rootEditor, EventManagerContext eventManagerContext)
-    {
-        if (node is JtBoolNode boolNode)
-            return new BoolEditorItem(boolNode, token, rootEditor, eventManagerContext);
-        if (node is JtValueNode valueNode)
-            return new ValueEditorItem(valueNode, token, rootEditor, eventManagerContext);
-        if (node is JtBlockNode blockNode)
-            return new BlockEditorItem(blockNode, token, rootEditor, eventManagerContext);
-        if (node is JtArrayNode arrayNode)
-            return new ArrayEditorItem(arrayNode, token, rootEditor, eventManagerContext);
-        return new UnknownEditorItem(node, token, rootEditor, eventManagerContext);
-    }
-
-    protected class FocusableControl : UserControl
-    {
-        public FocusableControl()
-        {
-            SetStyle(ControlStyles.Selectable, true);
-        }
-    }
-}
-internal class DynamicNamePreviewChangeEventArgs : EventArgs
-{
-    public DynamicNamePreviewChangeEventArgs(string? newDynamicName, string? oldDynamicName)
-    {
-        NewDynamicName = newDynamicName;
-        OldDynamicName = oldDynamicName;
-    }
-
-    public string? NewDynamicName { get; }
-    public string? OldDynamicName { get; }
 }

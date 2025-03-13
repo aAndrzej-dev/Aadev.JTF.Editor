@@ -1,92 +1,63 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using Aadev.JTF.Types;
-using Newtonsoft.Json.Linq;
+using Aadev.JTF.Editor.ViewModels;
+using Aadev.JTF.Nodes;
 
 namespace Aadev.JTF.Editor.EditorItems;
 
-internal partial class ArrayEditorItem : EditorItem
+internal partial class ArrayEditorItem : ContainerEditorItem
 {
     private Rectangle addNewButtonBounds = Rectangle.Empty;
-    private JToken value;
-    private int y;
-    private FocusableControl? focusControl;
     private ContextMenuStrip? cmsPrefabSelect;
-    private JtNode? singlePrefab;
-    public JContainer? ValidValue => Value as JContainer;
+
     private new JtArrayNode Node => (JtArrayNode)base.Node;
-
-    private IEnumerable<EditorItem> EditorItems => Controls.OfType<EditorItem>();
-
-
-
-    public override JToken Value
-    {
-        get => value;
-        set
-        {
-            JToken oldValue = this.value;
-            this.value = value;
-            Invalidate();
-            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, value, this));
-        }
-    }
-    [MemberNotNullWhen(false, nameof(ValidValue))] public new bool IsInvalidValueType => base.IsInvalidValueType;
-
-    internal override bool IsSavable => base.IsSavable || (!IsInvalidValueType && ValidValue.Count > 0);
-    protected override bool IsFocused => base.IsFocused || focusControl?.Focused is true;
-
-    internal ArrayEditorItem(JtArrayNode node, JToken? token, JsonJtfEditor rootEditor, EventManagerContext eventManagerContext) : base(node, token, rootEditor, eventManagerContext)
-    {
-        SetStyle(ControlStyles.ContainerControl, true);
-
-        value ??= (JContainer)Node.CreateDefaultValue();
-
-        if (token is not null && Node.SingleType && ((JContainer)token).Count > 0)
-        {
-            JTokenType? jtype = ((JContainer)token)[0]?.Type;
-            singlePrefab = Node.Children.Nodes!.Where(x => x.JsonType == jtype).FirstOrDefault();
-        }
-    }
-
+    public new JtArrayViewModel ViewModel => (JtArrayViewModel)base.ViewModel;
+    internal ArrayEditorItem(JtArrayViewModel node, JsonJtfEditor rootEditor) : base(node, rootEditor) { }
     private void OnPrefabSelect_Click(object? sender, EventArgs e)
     {
-        if (sender is not ToolStripMenuItem control)
+        if (sender is not ToolStripMenuItem control || control.Tag is not JtNode prefab || ViewModel.IsInvalidValueType)
             return;
-        if (control.Tag is not JtNode prefab)
-            return;
-        if (IsInvalidValueType)
-            return;
-
         if (Node.SingleType)
-            singlePrefab = prefab;
+            ViewModel.SinglePrefab = prefab;
 
-        Expanded = true;
-        y -= 10;
-        EnsureValue();
-        JToken value;
-        if (Node.ContainerJsonType is JtContainerType.Block)
-            value = CreateObjectItem(prefab).Value;
-        else
-            value = CreateArrayItem(ValidValue.Count, prefab, null, true).Value;
-
-        y += 10;
-        Height = y;
-
-        OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.AddToken, null, value, this));
-
+        AddNewItem(prefab);
     }
-    private void EnsureValue()
+    private void AddNewItem(JtNode prefab)
     {
-        if (IsInvalidValueType)
-            Value = Node.CreateDefaultValue();
+        ViewModel.Expanded = true;
+
+        JtNodeViewModel vm = ViewModel.AddNewItem(prefab);
+        int y = Height - 5;
+        (y, _) = CreateChildItem(vm, true, y);
+
+        Height = y + 5;
+    }
+    private void RequestAddNewItem()
+    {
+        if (ViewModel.Root.IsReadOnly || ViewModel.IsInvalidValueType)
+            return;
+        if (Node.Prefabs.Nodes!.Count == 0 || (Node.MaxSize >= 0 && Node.MaxSize <= ViewModel.ValidValue.Count))
+            return;
+
+        if (Node.Prefabs.Nodes!.Count > 1)
+        {
+            if (Node.SingleType && ViewModel.SinglePrefab is not null)
+            {
+                AddNewItem(ViewModel.SinglePrefab);
+                return;
+            }
+
+            InitContextMenu();
+            cmsPrefabSelect!.Show(MousePosition);
+            return;
+        }
+
+        AddNewItem(Node.Prefabs.Nodes![0]);
     }
     private void UpdateLayout(EditorItem bei)
     {
@@ -98,138 +69,52 @@ internal partial class ArrayEditorItem : EditorItem
             index = bei.ArrayIndex;
         }
 
-        foreach (EditorItem control in Controls.OfType<EditorItem>().Where(x => x.Top > bei.Top))
+        foreach (Control control in Controls)
         {
+            if (control is not EditorItem ei || control.Top <= bei.Top)
+                continue;
             if (control.Top != oy)
                 control.Top = oy;
             oy += control.Height;
             oy += 5;
             if (Node.ContainerJsonType is JtContainerType.Array)
             {
-                control.ArrayIndex = index;
+                ei.ArrayIndex = index;
                 index++;
             }
         }
 
-        y = oy + 10;
-        Height = y;
+        Height = oy + 5;
         ResumeLayout();
     }
-    private void LoadAsArray()
+
+    private (int, EditorItem) CreateChildItem(JtNodeViewModel vm, bool focus, int y)
     {
-        if (Value is not JArray jArray)
-        {
-            return;
-        }
+        EditorItem bei = Create(vm, RootEditor);
 
-        for (int i = 0; i < jArray.Count; i++)
-        {
-            CreateArrayItem(i, Node.Prefabs.Nodes!.FirstOrDefault(x => CheckPrefab(x, jArray[i])) ?? Node.Prefabs.Nodes![0], jArray[i]);
-        }
-    }
-    private static bool CheckPrefab(JtNode prefab, JToken value)
-    {
-        if (prefab.JsonType != value.Type)
-            return false;
-
-        if (prefab is JtBlockNode b && b.JsonType is JTokenType.Object)
-        {
-            foreach (JProperty item in ((JObject)value).Properties())
-            {
-                if (!b.Children.Nodes!.Any(x => x.Name == item.Name))
-                    return false;
-
-            }
-        }
-
-        return true;
-
-    }
-    private void LoadAsObject()
-    {
-        if (Value is not JObject jObject)
-        {
-            return;
-        }
-
-        foreach (JProperty item in jObject.Properties())
-        {
-            CreateObjectItem(Node.Prefabs.Nodes!.FirstOrDefault(x => x.JsonType == item.Value.Type) ?? Node.Prefabs.Nodes![0], item);
-        }
-    }
-    private EditorItem CreateArrayItem(int index, JtNode prefab, JToken? itemValue = null, bool focus = false)
-    {
-        EditorItem bei = Create(prefab, itemValue, RootEditor, new EventManagerContext(eventManagerContext));
-
-
-        JArray value = (JArray)Value;
-
-
-        bei.Location = new Point(10, y);
-        bei.Width = Width - 20;
-
-        bei.ArrayIndex = index;
-        if (itemValue is null)
-        {
-            JToken jtoken = bei.Value;
-            if (jtoken.Type is JTokenType.Null)
-                jtoken = bei.Node.CreateDefaultValue();
-            value.Add(jtoken);
-        }
+        bei.Location = new Point(Indent, y);
+        bei.Width = Width - (2 * Indent);
 
 
         Controls.Add(bei);
 
-        bei.HeightChanged += (sender, e) =>
+        bei.HeightChanged += (bei) =>
         {
-            if (sender is not EditorItem bei)
-                return;
             SuspendLayout();
             int oy = bei.Top + bei.Height + 5;
-            foreach (Control control in Controls.Cast<Control>().Where(x => x.Top >= bei.Top && x != bei))
+            foreach (Control control in Controls)
             {
+                if (control is not EditorItem || control.Top < bei.Top || control == bei)
+                    continue;
                 control.Top = oy;
                 oy += control.Height;
                 oy += 5;
             }
 
-            Height = y = oy + 10;
+            Height = oy + 5;
             ResumeLayout();
         };
 
-
-        bei.ValueChanged += (sender, e) =>
-        {
-            if (sender is not EditorItem bei)
-                return;
-
-            int ind = bei.ArrayIndex;
-
-            if (Value is not JArray array)
-                return;
-
-            JToken value = bei.Value;
-            if (value.Type is JTokenType.Null)
-                value = bei.Node.CreateDefaultValue();
-
-            if (array.Count <= ind)
-            {
-                while (array.Count < ind)
-                {
-                    array.Add(JValue.CreateNull());
-                }
-
-                array.Add(value);
-            }
-            else
-            {
-                array[ind] = value;
-            }
-
-            OnValueChanged(e);
-
-
-        };
         if (focus)
             bei.Focus();
 
@@ -238,173 +123,37 @@ internal partial class ArrayEditorItem : EditorItem
             y += bei.Height + 5;
         }
 
-        return bei;
-
+        return (y, bei);
     }
-    private EditorItem CreateObjectItem(JtNode prefab, JProperty? item = null)
-    {
-        EditorItem bei = Create(prefab, item?.Value, RootEditor, new EventManagerContext(eventManagerContext));
 
-        bei.Location = new Point(10, y);
-        bei.Width = Width - 20;
-
-
-
-
-        string newDynamicName = string.Empty;
-
-        if (item is null)
-        {
-            newDynamicName = $"new {Node.Name} item";
-            if (EditorItems.Any(x => x.DynamicName == newDynamicName))
-            {
-                int i = 1;
-                while (EditorItems.Any(x => x.DynamicName == $"new {Node.Name} item {i}"))
-                {
-                    i++;
-                }
-
-                newDynamicName = $"new {Node.Name} item {i}";
-
-
-            }
-
-            bei.DynamicName = newDynamicName;
-        }
-        else
-        {
-            bei.DynamicName = item.Name;
-        }
-
-
-        Controls.Add(bei);
-
-        bei.HeightChanged += (sender, ev) =>
-        {
-            if (sender is not EditorItem bei)
-                return;
-            int oy = bei.Top + bei.Height + 5;
-            foreach (Control control in Controls.OfType<EditorItem>().Where(x => x.Top > bei.Top))
-            {
-                if (control.Top != oy)
-                    control.Top = oy;
-                oy += control.Height;
-                oy += 5;
-
-            }
-
-            Height = y = oy + 10;
-        };
-
-
-        bei.ValueChanged += (sender, e) =>
-        {
-            if (Value is not JObject obj)
-                return;
-            if (sender is not EditorItem bei)
-                return;
-
-            if (e.Action.Type is JtfEditorAction.JtEditorActionType.DynamicNameChanged && EditorItems.Any(x => x.DynamicName == bei.DynamicName && x != bei))
-            {
-                bei.DynamicName = (string?)e.Action.OldValue;
-                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, Properties.Resources.ArrayObjectNameExist, bei.DynamicName), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                bei.Focus();
-                return;
-            }
-
-            if (e.Action.Type is JtfEditorAction.JtEditorActionType.DynamicNameChanged && e.Action.OldValue is JValue v && v.Value is string)
-            {
-                obj.Remove((string)e.Action.OldValue!);
-            }
-
-            JToken value = bei.Value;
-            if (value.Type is JTokenType.Null)
-                value = bei.Node.CreateDefaultValue();
-            obj[bei.DynamicName!] = value;
-
-            OnValueChanged(e);
-
-
-
-        };
-        bei.DynamicNamePreviewChange += (s, ev) => OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.None, null, null, this));
-
-
-        JToken value = bei.Value;
-        if (value.Type is JTokenType.Null)
-            value = bei.Node.CreateDefaultValue();
-        if (!JToken.DeepEquals(Value[bei.DynamicName], value))
-        {
-            JToken? oldValue = Value[bei.DynamicName];
-
-            Value[bei.DynamicName] = value;
-            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.ChangeValue, oldValue, Value[bei.DynamicName], this));
-        }
-
-        if (bei.Height != 0)
-        {
-            y += bei.Height + 5;
-        }
-
-        return bei;
-    }
     internal void RemoveChild(EditorItem editorItem)
     {
         Focus();
-
-        EnsureValue();
+        ViewModel.RemoveChild(editorItem.ViewModel);
         Controls.Remove(editorItem);
-        JToken? oldValue;
-        if (Node.MakeAsObject)
-        {
-            if (editorItem.DynamicName is not null)
-            {
-                oldValue = ((JObject)value)[editorItem.DynamicName];
-                ((JObject)value)!.Remove(editorItem.DynamicName);
-
-            }
-            else
-                oldValue = null;
-        }
-        else
-        {
-            oldValue = ((JArray)value)[editorItem.ArrayIndex];
-            ((JArray)value)!.RemoveAt(editorItem.ArrayIndex);
-        }
-
-        if (ValidValue!.Count == 0)
-            singlePrefab = null;
-        OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.RemoveToken, oldValue, null, this));
         UpdateLayout(editorItem);
     }
-
     protected override Color BorderColor
     {
         get
         {
-            if (IsInvalidValueType)
+            if (ViewModel.IsInvalidValueType)
                 return Color.Red;
-            if (Node.MaxSize >= 0 && Node.MaxSize < ValidValue.Count)
+            if (Node.MaxSize >= 0 && Node.MaxSize < ViewModel.ValidValue.Count)
                 return Color.Yellow;
             return base.BorderColor;
         }
     }
-
-    internal JtNode? SinglePrefab => singlePrefab;
-
-    protected override void OnPaint(PaintEventArgs e)
+    protected override void PostDraw(Graphics g, ref DrawingBounds db)
     {
-        base.OnPaint(e);
-
-        if (IsInvalidValueType)
+        if (ViewModel.IsInvalidValueType)
             return;
-        Graphics g = e.Graphics;
 
         int addWidth = (IsFocused && !Node.IsArrayPrefab) ? 29 : 30;
-        addNewButtonBounds = new Rectangle(Width - xRightOffset - addWidth, yOffset, addWidth, innerHeight);
-        if (!RootEditor.ReadOnly)
+        addNewButtonBounds = new Rectangle(Width - db.xRightOffset - addWidth, db.yOffset, addWidth, db.innerHeight);
+        if (!ViewModel.Root.IsReadOnly)
         {
-            if (Expanded && !Node.IsDynamicName)
+            if (ViewModel.Expanded && !Node.IsDynamicName)
             {
                 RectangleF bounds = new RectangleF(addNewButtonBounds.Location, addNewButtonBounds.Size);
                 g.SmoothingMode = SmoothingMode.HighQuality;
@@ -422,81 +171,49 @@ internal partial class ArrayEditorItem : EditorItem
             }
             else
                 g.FillRectangle(RootEditor.ColorTable.AddItemButtonBackBrush, addNewButtonBounds);
-            g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - addWidth - xRightOffset + 15, 8, Width - addWidth - xRightOffset + 15, 24);
-            g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - addWidth - xRightOffset + 7, 16, Width - addWidth - xRightOffset + 23, 16);
-            xRightOffset += addWidth;
-
+            g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - addWidth - db.xRightOffset + 15, 8, Width - addWidth - db.xRightOffset + 15, 24);
+            g.DrawLine(RootEditor.ColorTable.RemoveItemButtonForePen, Width - addWidth - db.xRightOffset + 7, 16, Width - addWidth - db.xRightOffset + 23, 16);
+            db.xRightOffset += addWidth;
         }
 
         string msg;
-        if (singlePrefab is null)
-            msg = string.Format(CultureInfo.CurrentCulture, Properties.Resources.ArrayElementsCount, Node.MaxSize >= 0 ? $"{ValidValue.Count}/{Node.MaxSize}" : ValidValue.Count.ToString(CultureInfo.CurrentCulture));
+        if (ViewModel.SinglePrefab is null)
+            msg = string.Format(CultureInfo.CurrentCulture, Properties.Resources.ArrayElementsCount, Node.MaxSize >= 0 ? $"{ViewModel.ValidValue.Count}/{Node.MaxSize}" : ViewModel.ValidValue.Count.ToString(CultureInfo.CurrentCulture));
         else
-            msg = string.Format(CultureInfo.CurrentCulture, Properties.Resources.ArrayElementsCountOfType, Node.MaxSize >= 0 ? $"{ValidValue.Count}/{Node.MaxSize}" : ValidValue.Count.ToString(CultureInfo.CurrentCulture), singlePrefab.Type.DisplayName);
+            msg = string.Format(CultureInfo.CurrentCulture, Properties.Resources.ArrayElementsCountOfType, Node.MaxSize >= 0 ? $"{ViewModel.ValidValue.Count}/{Node.MaxSize}" : ViewModel.ValidValue.Count.ToString(CultureInfo.CurrentCulture), ViewModel.SinglePrefab.Type.DisplayName);
         SizeF msgSize = g.MeasureString(msg, Font);
 
-        g.DrawString(msg, Font, ForeColorBrush, new PointF(Width - xRightOffset - 10 - msgSize.Width, 16 - (msgSize.Height / 2)));
+        g.DrawString(msg, Font, RootEditor.ColorTable.NameForeBrush, new PointF(Width - db.xRightOffset - 10 - msgSize.Width, 16 - (msgSize.Height / 2)));
 
-        xRightOffset += (int)msgSize.Width;
+        db.xRightOffset += (int)msgSize.Width;
     }
-    protected override void OnExpandChanged()
+    internal override void OnExpandChanged()
     {
         Focus(); // To unfocus dynamic name textbox of child
-        if (IsInvalidValueType)
+        if (ViewModel.IsInvalidValueType)
             return;
         SuspendLayout();
-        if (!Expanded)
+        if (!ViewModel.Expanded)
         {
-            focusControl = null;
+            DestroyFocusPanel();
             Controls.Clear();
 
             Height = 32;
-            base.OnExpandChanged();
             ResumeLayout();
             return;
         }
 
+        CreateFocusPanel();
 
-        focusControl = new FocusableControl
+        int y = 38;
+        Span<JtNodeViewModel> childrenSpan = CollectionsMarshal.AsSpan(ViewModel.GetChildren());
+        for (int i = 0; i < childrenSpan.Length; i++)
         {
-            Height = 0,
-            Width = 0,
-            Top = 0,
-            Left = 0
-        };
-        focusControl.GotFocus += (s, e) => Invalidate();
-        focusControl.LostFocus += (s, e) => Invalidate();
-        focusControl.KeyDown += (s, e) =>
-        {
-            if (IsInvalidValueType)
-                return;
-
-            if (e.KeyCode == Keys.Space)
-            {
-                Expanded = !Expanded;
-            }
-        };
-        Controls.Add(focusControl);
-        focusControl?.Focus();
-
-
-        y = 38;
-
-
-
-        if (Node.MakeAsObject)
-            LoadAsObject();
-        else
-            LoadAsArray();
-
-        y += 10;
-        if (Expanded)
-        {
-            Height = y;
+            (y, _) = CreateChildItem(childrenSpan[i], false, y);
         }
 
+        Height = y + 5;
 
-        base.OnExpandChanged();
         ResumeLayout();
     }
     private void InitContextMenu()
@@ -507,7 +224,7 @@ internal partial class ArrayEditorItem : EditorItem
         Span<JtNode> collectionSpan = CollectionsMarshal.AsSpan(Node.Prefabs.Nodes!);
         for (int i = 0; i < collectionSpan.Length; i++)
         {
-            JtNode? item = collectionSpan[i];
+            JtNode item = collectionSpan[i];
             ToolStripMenuItem? tsmi = new ToolStripMenuItem() { Tag = item };
 
             if (item.Name is null)
@@ -515,10 +232,7 @@ internal partial class ArrayEditorItem : EditorItem
             else
                 tsmi.Text = $"{item.Name} ({item.Type.DisplayName})";
 
-
-            Bitmap? bmp = Properties.Resources.ResourceManager.GetObject(item.Type.Name, CultureInfo.InvariantCulture) as Bitmap;
-
-            if (bmp is not null)
+            if (Properties.Resources.ResourceManager.GetObject(item.Type.Name, CultureInfo.InvariantCulture) is Bitmap bmp)
                 tsmi.Image = bmp;
 
             tsmi.BackColor = Color.FromArgb(80, 80, 80);
@@ -538,72 +252,15 @@ internal partial class ArrayEditorItem : EditorItem
     {
         base.OnMouseClick(e);
 
-        if (IsInvalidValueType)
+        if (ViewModel.IsInvalidValueType)
             return;
-        if (!Expanded)
-        {
-            Focus();
-        }
-        else
-        {
-            focusControl?.Focus();
-        }
 
         if (e.Button != MouseButtons.Left)
             return;
 
         if (addNewButtonBounds.Contains(e.Location))
         {
-            if (RootEditor.ReadOnly)
-                return;
-            if (Node.Prefabs.Nodes!.Count == 0 || (Node.MaxSize >= 0 && Node.MaxSize <= ValidValue.Count))
-                return;
-
-
-
-            if (Node.Prefabs.Nodes!.Count > 1)
-            {
-                if (Node.SingleType)
-                {
-                    if (singlePrefab is not null)
-                    {
-                        Expanded = true;
-                        y -= 10;
-
-                        EnsureValue();
-                        JToken newValue2;
-                        if (Node.MakeAsObject)
-                            newValue2 = CreateObjectItem(singlePrefab).Value;
-                        else
-                            newValue2 = CreateArrayItem(((JArray)Value).Count, singlePrefab, null, true).Value;
-
-                        y += 10;
-                        Height = y;
-
-                        OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.AddToken, null, newValue2, this));
-                        return;
-                    }
-                }
-
-                InitContextMenu();
-                cmsPrefabSelect!.Show(MousePosition);
-                return;
-            }
-
-            Expanded = true;
-            y -= 10;
-
-            EnsureValue();
-            JToken newValue;
-            if (Node.MakeAsObject)
-                newValue = CreateObjectItem(Node.Prefabs.Nodes![0]).Value;
-            else
-                newValue = CreateArrayItem(((JArray)Value).Count, Node.Prefabs.Nodes![0], null, true).Value;
-
-            y += 10;
-            Height = y;
-
-            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.AddToken, null, newValue, this));
+            RequestAddNewItem();
         }
     }
 
@@ -612,54 +269,21 @@ internal partial class ArrayEditorItem : EditorItem
         base.OnKeyDown(e);
         if (e.KeyCode == Keys.N && e.Control)
         {
-            if (Node.Prefabs.Nodes!.Count == 0)
-                return;
-            if (Node.Prefabs.Nodes!.Count > 1)
-            {
-                cmsPrefabSelect!.Show(MousePosition);
-                return;
-            }
-
-            Expanded = true;
-            y -= 10;
-
-            EnsureValue();
-            JToken newValue;
-            if (Node.MakeAsObject)
-                newValue = CreateObjectItem(Node.Prefabs.Nodes![0]).Value;
-            else
-                newValue = CreateArrayItem(((JArray)Value).Count, Node.Prefabs.Nodes![0], null, true).Value;
-
-            y += 10;
-            Height = y;
-            OnValueChanged(new JtfEditorAction(JtfEditorAction.JtEditorActionType.AddToken, null, newValue, this));
-
+            RequestAddNewItem();
         }
     }
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        if (IsInvalidValueType || RootEditor.ReadOnly)
+        if (ViewModel.IsInvalidValueType || ViewModel.Root.IsReadOnly)
             return;
         if (addNewButtonBounds.Contains(e.Location))
         {
-            if (Node.Prefabs.Nodes!.Count == 0 || (Node.MaxSize >= 0 && Node.MaxSize <= ValidValue.Count))
+            if (Node.Prefabs.Nodes!.Count == 0 || (Node.MaxSize >= 0 && Node.MaxSize <= ViewModel.ValidValue.Count))
                 Cursor = Cursors.No;
             else
                 Cursor = Cursors.Hand;
             return;
-        }
-    }
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
-
-        int w = Width - 20;
-
-        foreach (Control item in Controls)
-        {
-            if (item.Width != w)
-                item.Width = w;
         }
     }
 }
