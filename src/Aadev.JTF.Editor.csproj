@@ -15,6 +15,7 @@
 	<FileVersion>2.0.0.5</FileVersion>
 	<Version>2.0.0-beta5</Version>
     <ImplicitUsings>disable</ImplicitUsings>
+    <PackageReadmeFile>Readme.md</PackageReadmeFile>
     <Description>Json Template Format Editor</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReleaseNotes>The logic is now seperated form the view for future moving to WPF.
@@ -27,13 +28,9 @@ Bug fixes and improvements</PackageReleaseNotes>
 	<PackageProjectUrl>https://github.com/aAndrzej-dev/Aadev.JTF.Editor</PackageProjectUrl>
 	<TreatWarningsAsErrors>False</TreatWarningsAsErrors>
 	  <LangVersion>12.0</LangVersion>
+	  <SignAssembly>True</SignAssembly>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta6" />
-  </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
@@ -48,5 +45,18 @@ Bug fixes and improvements</PackageReleaseNotes>
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+	
+  <ItemGroup>
+    <None Include="Readme.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Aadev.ConditionsInterpreter" Version="1.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Aadev.JTF" Version="2.0.0-beta6" />
   </ItemGroup>
 </Project>

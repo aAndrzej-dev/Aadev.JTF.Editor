@@ -39,7 +39,7 @@ public sealed class JtValueViewModel : JtNodeViewModel
 
 
                 if (value as JValue is null)
-                    return;
+                    return; //TODO: Move this up or remove
 
                 iSuggestionKey.suggestions.Add(new IntelligentSuggestion((JValue)value, iSuggestionKey));
             }
