@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{C32DDC8A-383B-4EF7-A357-73F16C675425}") = "Aadev.JTF.Editor", "src\Aadev.JTF.Editor.csproj", "{E2D885A7-E0E3-4476-B324-A983CCF671F3}"
+Project("{C32DDC8A-383B-4EF7-A357-73F16C675425}") = "Aadev.JTF.Editor", "Aadev.JTF.Editor\Aadev.JTF.Editor.csproj", "{E2D885A7-E0E3-4476-B324-A983CCF671F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
